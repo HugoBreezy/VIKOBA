@@ -2,6 +2,7 @@ package com.example.vikoba.service;
 
 import com.example.vikoba.entity.User;
 import com.example.vikoba.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -12,11 +13,14 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UserService(
-            UserRepository userRepository
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /*
@@ -33,7 +37,7 @@ public class UserService {
                 user.getUsername()
         )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Username already exists: "
                             + user.getUsername()
             );
@@ -46,6 +50,7 @@ public class UserService {
                 user.getRole().isBlank()) {
 
             user.setRole("USER");
+
         } else {
 
             user.setRole(
@@ -54,9 +59,19 @@ public class UserService {
         }
 
         /*
+         * Encode password before saving.
+         */
+        user.setPassword(
+                passwordEncoder.encode(
+                        user.getPassword()
+                )
+        );
+
+        /*
          * Automatically set creation time.
          */
         if (user.getCreatedAt() == null) {
+
             user.setCreatedAt(
                     LocalDateTime.now()
             );
@@ -109,7 +124,7 @@ public class UserService {
         User existingUser =
                 userRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "User not found with id: "
                                                 + id
                                 )
@@ -127,7 +142,7 @@ public class UserService {
                         updatedUser.getUsername()
                 )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Username already exists: "
                             + updatedUser.getUsername()
             );
@@ -137,10 +152,18 @@ public class UserService {
                 updatedUser.getUsername()
         );
 
+        /*
+         * Encode the new password before saving.
+         */
         existingUser.setPassword(
-                updatedUser.getPassword()
+                passwordEncoder.encode(
+                        updatedUser.getPassword()
+                )
         );
 
+        /*
+         * Keep existing role if no new role is supplied.
+         */
         if (updatedUser.getRole() == null ||
                 updatedUser.getRole().isBlank()) {
 
@@ -167,7 +190,7 @@ public class UserService {
 
         if (!userRepository.existsById(id)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "User not found with id: " + id
             );
         }
@@ -184,7 +207,7 @@ public class UserService {
 
         if (user == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "User data cannot be null"
             );
         }
@@ -195,7 +218,7 @@ public class UserService {
         if (user.getUsername() == null ||
                 user.getUsername().isBlank()) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Username is required"
             );
         }
@@ -206,7 +229,7 @@ public class UserService {
         if (user.getPassword() == null ||
                 user.getPassword().isBlank()) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Password is required"
             );
         }
@@ -223,7 +246,7 @@ public class UserService {
             if (!role.equals("USER") &&
                     !role.equals("ADMIN")) {
 
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                         "Invalid role. "
                                 + "Allowed values: USER, ADMIN"
                 );

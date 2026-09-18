@@ -33,7 +33,7 @@ public class MemberService {
                 member.getMemberNumber()
         )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member number already exists: "
                             + member.getMemberNumber()
             );
@@ -46,7 +46,7 @@ public class MemberService {
                 member.getPhone()
         )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Phone number already exists: "
                             + member.getPhone()
             );
@@ -59,6 +59,7 @@ public class MemberService {
                 member.getStatus().isBlank()) {
 
             member.setStatus("ACTIVE");
+
         } else {
 
             member.setStatus(
@@ -118,9 +119,7 @@ public class MemberService {
             return false;
         }
 
-        return memberRepository.existsByPhone(
-                phone
-        );
+        return memberRepository.existsByPhone(phone);
     }
 
     /*
@@ -134,7 +133,7 @@ public class MemberService {
         Member existingMember =
                 memberRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Member not found with id: "
                                                 + id
                                 )
@@ -152,7 +151,7 @@ public class MemberService {
                         updatedMember.getMemberNumber()
                 )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member number already exists: "
                             + updatedMember.getMemberNumber()
             );
@@ -168,7 +167,7 @@ public class MemberService {
                         updatedMember.getPhone()
                 )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Phone number already exists: "
                             + updatedMember.getPhone()
             );
@@ -222,7 +221,7 @@ public class MemberService {
 
         if (!memberRepository.existsById(id)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member not found with id: " + id
             );
         }
@@ -239,7 +238,7 @@ public class MemberService {
 
         if (member == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member data cannot be null"
             );
         }
@@ -250,7 +249,7 @@ public class MemberService {
         if (member.getMemberNumber() == null ||
                 member.getMemberNumber().isBlank()) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member number is required"
             );
         }
@@ -261,7 +260,7 @@ public class MemberService {
         if (member.getFullName() == null ||
                 member.getFullName().isBlank()) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Full name is required"
             );
         }
@@ -272,7 +271,7 @@ public class MemberService {
         if (member.getPhone() == null ||
                 member.getPhone().isBlank()) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Phone number is required"
             );
         }
@@ -282,7 +281,7 @@ public class MemberService {
          */
         if (member.getJoinDate() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Join date is required"
             );
         }
@@ -293,7 +292,7 @@ public class MemberService {
         if (member.getJoinDate()
                 .isAfter(LocalDate.now())) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Join date cannot be in the future"
             );
         }
@@ -311,12 +310,15 @@ public class MemberService {
                     !status.equals("INACTIVE") &&
                     !status.equals("SUSPENDED")) {
 
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                         "Invalid member status. "
                                 + "Allowed values: ACTIVE, INACTIVE, SUSPENDED"
                 );
             }
 
+            /*
+             * Store status consistently in uppercase.
+             */
             member.setStatus(status);
         }
     }

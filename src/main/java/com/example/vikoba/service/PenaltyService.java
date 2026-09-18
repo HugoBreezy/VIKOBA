@@ -6,6 +6,7 @@ import com.example.vikoba.entity.Penalty;
 import com.example.vikoba.repository.LoanInstallmentRepository;
 import com.example.vikoba.repository.PenaltyRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,6 +31,10 @@ public class PenaltyService {
         this.systemSettingService = systemSettingService;
     }
 
+    // ============================================================
+    // CREATE PENALTY
+    // ============================================================
+
     /*
      * Create a penalty for an overdue installment.
      *
@@ -41,6 +46,7 @@ public class PenaltyService {
      * The installment is loaded from the database
      * using its ID.
      */
+    @Transactional
     public Penalty savePenalty(Penalty penalty) {
 
         validatePenalty(penalty);
@@ -55,7 +61,7 @@ public class PenaltyService {
                 loanInstallmentRepository.findById(
                         installmentId
                 ).orElseThrow(() ->
-                        new RuntimeException(
+                        new IllegalArgumentException(
                                 "Installment not found with id: "
                                         + installmentId
                         )
@@ -74,7 +80,7 @@ public class PenaltyService {
 
         if (existingPenalty.isPresent()) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Penalty has already been created for this installment"
             );
         }
@@ -84,7 +90,7 @@ public class PenaltyService {
          */
         if (!isOverdue(installment)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "This installment is not overdue"
             );
         }
@@ -96,7 +102,7 @@ public class PenaltyService {
 
         if (loan == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Installment is not associated with a loan"
             );
         }
@@ -115,7 +121,7 @@ public class PenaltyService {
         if (penaltyRate == null ||
                 penaltyRate.compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "PENALTY_RATE must be greater than zero"
             );
         }
@@ -145,7 +151,7 @@ public class PenaltyService {
 
         if (penaltyAmount.compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Calculated penalty amount must be greater than zero"
             );
         }
@@ -178,6 +184,10 @@ public class PenaltyService {
         return penaltyRepository.save(penalty);
     }
 
+    // ============================================================
+    // CALCULATE INSTALLMENT INTEREST
+    // ============================================================
+
     /*
      * Calculate the interest attributable
      * to one installment.
@@ -195,14 +205,14 @@ public class PenaltyService {
         if (loan.getTotalAmount() == null ||
                 loan.getInterestAmount() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Loan total amount and interest amount are required"
             );
         }
 
         if (installment.getAmount() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Installment amount is required"
             );
         }
@@ -210,7 +220,7 @@ public class PenaltyService {
         if (loan.getTotalAmount()
                 .compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Loan total amount must be greater than zero"
             );
         }
@@ -223,6 +233,10 @@ public class PenaltyService {
                         RoundingMode.HALF_UP
                 );
     }
+
+    // ============================================================
+    // CHECK OVERDUE
+    // ============================================================
 
     /*
      * Check whether an installment is overdue.
@@ -253,13 +267,25 @@ public class PenaltyService {
                 .isBefore(LocalDate.now());
     }
 
+    // ============================================================
+    // GET ALL PENALTIES
+    // ============================================================
+
     public List<Penalty> getAllPenalties() {
         return penaltyRepository.findAll();
     }
 
+    // ============================================================
+    // GET PENALTY BY ID
+    // ============================================================
+
     public Optional<Penalty> getPenaltyById(Long id) {
         return penaltyRepository.findById(id);
     }
+
+    // ============================================================
+    // GET PENALTIES BY INSTALLMENT
+    // ============================================================
 
     public List<Penalty> getPenaltiesByInstallment(
             Long installmentId
@@ -268,6 +294,10 @@ public class PenaltyService {
                 installmentId
         );
     }
+
+    // ============================================================
+    // GET PENALTY BY INSTALLMENT AND STATUS
+    // ============================================================
 
     public Optional<Penalty> getPenaltyByInstallmentAndStatus(
             Long installmentId,
@@ -279,15 +309,21 @@ public class PenaltyService {
         );
     }
 
+    // ============================================================
+    // GET PENALTIES BY STATUS
+    // ============================================================
+
     public List<Penalty> getPenaltiesByStatus(
             String status
     ) {
         return penaltyRepository.findByStatus(status);
     }
 
-    /*
-     * Update an existing penalty.
-     */
+    // ============================================================
+    // UPDATE PENALTY
+    // ============================================================
+
+    @Transactional
     public Penalty updatePenalty(
             Long id,
             Penalty updatedPenalty
@@ -296,7 +332,7 @@ public class PenaltyService {
         Penalty existingPenalty =
                 penaltyRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Penalty not found with id: "
                                                 + id
                                 )
@@ -308,60 +344,160 @@ public class PenaltyService {
          * Load the complete installment from database.
          */
         Long installmentId =
-                updatedPenalty.getInstallment().getId();
+                updatedPenalty
+                        .getInstallment()
+                        .getId();
 
         LoanInstallment installment =
                 loanInstallmentRepository.findById(
                         installmentId
                 ).orElseThrow(() ->
-                        new RuntimeException(
+                        new IllegalArgumentException(
                                 "Installment not found with id: "
                                         + installmentId
                         )
                 );
 
+        /*
+         * Penalty can only exist for an overdue
+         * unpaid installment.
+         */
         if (!isOverdue(installment)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "This installment is not overdue"
             );
         }
 
+        /*
+         * Get loan associated with installment.
+         */
+        Loan loan = installment.getLoan();
+
+        if (loan == null) {
+
+            throw new IllegalArgumentException(
+                    "Installment is not associated with a loan"
+            );
+        }
+
+        /*
+         * Get current penalty rate from system settings.
+         *
+         * Do NOT trust penalty rate sent by Postman.
+         */
+        BigDecimal penaltyRate =
+                systemSettingService.getDecimalSetting(
+                        "PENALTY_RATE"
+                );
+
+        if (penaltyRate == null ||
+                penaltyRate.compareTo(BigDecimal.ZERO) <= 0) {
+
+            throw new IllegalArgumentException(
+                    "PENALTY_RATE must be greater than zero"
+            );
+        }
+
+        /*
+         * Recalculate the interest attributable
+         * to this installment.
+         */
+        BigDecimal installmentInterest =
+                calculateInstallmentInterest(
+                        loan,
+                        installment
+                );
+
+        /*
+         * Recalculate penalty amount.
+         */
+        BigDecimal penaltyAmount =
+                installmentInterest
+                        .multiply(penaltyRate)
+                        .divide(
+                                BigDecimal.valueOf(100),
+                                2,
+                                RoundingMode.HALF_UP
+                        );
+
+        if (penaltyAmount.compareTo(
+                BigDecimal.ZERO
+        ) <= 0) {
+
+            throw new IllegalArgumentException(
+                    "Calculated penalty amount must be greater than zero"
+            );
+        }
+
+        /*
+         * Use the database installment.
+         */
         existingPenalty.setInstallment(
                 installment
         );
 
+        /*
+         * Rate and amount are controlled
+         * by the system.
+         */
         existingPenalty.setPenaltyRate(
-                updatedPenalty.getPenaltyRate()
+                penaltyRate
         );
 
         existingPenalty.setPenaltyAmount(
-                updatedPenalty.getPenaltyAmount()
+                penaltyAmount
         );
 
-        existingPenalty.setPenaltyDate(
-                updatedPenalty.getPenaltyDate()
-        );
+        /*
+         * Update date only if supplied.
+         */
+        if (updatedPenalty.getPenaltyDate() != null) {
 
-        existingPenalty.setStatus(
-                updatedPenalty.getStatus()
-        );
+            existingPenalty.setPenaltyDate(
+                    updatedPenalty.getPenaltyDate()
+            );
 
+        } else if (existingPenalty.getPenaltyDate() == null) {
+
+            existingPenalty.setPenaltyDate(
+                    LocalDate.now()
+            );
+        }
+
+        /*
+         * Status can be updated.
+         */
+        if (updatedPenalty.getStatus() != null &&
+                !updatedPenalty.getStatus().isBlank()) {
+
+            existingPenalty.setStatus(
+                    updatedPenalty.getStatus()
+            );
+        }
+
+        /*
+         * Notes can be updated.
+         */
         existingPenalty.setNotes(
                 updatedPenalty.getNotes()
         );
 
-        return penaltyRepository.save(existingPenalty);
+        return penaltyRepository.save(
+                existingPenalty
+        );
     }
 
-    /*
-     * Delete penalty.
-     */
+    // ============================================================
+    // DELETE PENALTY
+    // ============================================================
+
+    @Transactional
     public void deletePenalty(Long id) {
 
         if (!penaltyRepository.existsById(id)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Penalty not found with id: " + id
             );
         }
@@ -369,16 +505,17 @@ public class PenaltyService {
         penaltyRepository.deleteById(id);
     }
 
-    /*
-     * Validate penalty information.
-     */
+    // ============================================================
+    // VALIDATE PENALTY
+    // ============================================================
+
     private void validatePenalty(
             Penalty penalty
     ) {
 
         if (penalty == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Penalty data cannot be null"
             );
         }
@@ -386,16 +523,22 @@ public class PenaltyService {
         if (penalty.getInstallment() == null ||
                 penalty.getInstallment().getId() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Installment is required"
             );
         }
 
+        /*
+         * These fields may be omitted from the request
+         * because the system calculates them.
+         *
+         * If supplied, negative values are still rejected.
+         */
         if (penalty.getPenaltyRate() != null &&
                 penalty.getPenaltyRate()
                         .compareTo(BigDecimal.ZERO) < 0) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Penalty rate cannot be negative"
             );
         }
@@ -404,7 +547,7 @@ public class PenaltyService {
                 penalty.getPenaltyAmount()
                         .compareTo(BigDecimal.ZERO) < 0) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Penalty amount cannot be negative"
             );
         }

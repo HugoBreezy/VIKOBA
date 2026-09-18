@@ -6,6 +6,7 @@ import com.example.vikoba.repository.ContributionRepository;
 import com.example.vikoba.repository.LoanInstallmentRepository;
 import com.example.vikoba.repository.LoanRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -33,15 +34,11 @@ public class LoanService {
         this.systemSettingService = systemSettingService;
     }
 
-    /*
-     * Create Loan
-     *
-     * Business rules:
-     * 1. Maximum loan = total contributions × loan multiplier
-     * 2. Interest is calculated from the interest rate supplied
-     * 3. Maximum repayment period comes from MAX_LOAN_WEEKS setting
-     * 4. Loan is divided into installments from MAX_LOAN_INSTALLMENTS setting
-     */
+    // ============================================================
+    // CREATE LOAN
+    // ============================================================
+
+    @Transactional
     public Loan saveLoan(Loan loan) {
 
         validateLoan(loan);
@@ -49,87 +46,74 @@ public class LoanService {
         Long memberId = loan.getMember().getId();
         Long cycleId = loan.getCycle().getId();
 
-        /*
-         * Get total contributions made by this member
-         * during the current financial cycle.
-         */
+        // --------------------------------------------------------
+        // CHECK OVERDUE UNPAID INSTALLMENTS
+        // --------------------------------------------------------
+
+        if (hasOverdueUnpaidInstallment(memberId)) {
+            throw new IllegalArgumentException(
+                    "Member cannot take a new loan because they have an overdue unpaid installment."
+            );
+        }
+
+        // --------------------------------------------------------
+        // GET TOTAL CONTRIBUTIONS
+        // --------------------------------------------------------
+
         BigDecimal totalContributions =
-                contributionRepository
-                        .findTotalAmountByMemberIdAndCycleId(
-                                memberId,
-                                cycleId
-                        );
+                contributionRepository.findTotalAmountByMemberIdAndCycleId(
+                        memberId,
+                        cycleId
+                );
 
         if (totalContributions == null) {
             totalContributions = BigDecimal.ZERO;
         }
 
-        /*
-         * Get loan multiplier from system settings.
-         *
-         * Example:
-         * contributions = 500,000
-         * multiplier = 3
-         * maximum loan = 1,500,000
-         */
-        BigDecimal loanMultiplier =
-                systemSettingService.getDecimalSetting(
-                        "LOAN_MULTIPLIER"
-                );
+        // --------------------------------------------------------
+        // GET LOAN MULTIPLIER
+        // --------------------------------------------------------
 
+        BigDecimal loanMultiplier =
+                getRequiredSetting("LOAN_MULTIPLIER");
+
+        // Maximum loan = Contributions × Multiplier
         BigDecimal maximumLoan =
-                totalContributions
-                        .multiply(loanMultiplier)
-                        .setScale(2, RoundingMode.HALF_UP);
+                totalContributions.multiply(loanMultiplier);
 
         if (loan.getPrincipalAmount().compareTo(maximumLoan) > 0) {
-
-            throw new RuntimeException(
-                    "Loan amount exceeds the member's maximum loan limit. "
-                            + "Maximum allowed: "
-                            + maximumLoan
+            throw new IllegalArgumentException(
+                    "Loan amount exceeds the maximum allowed amount. " +
+                            "Maximum allowed loan: " + maximumLoan
             );
         }
 
-        /*
-         * Get maximum loan repayment period from settings.
-         */
+        // --------------------------------------------------------
+        // GET LOAN DURATION SETTINGS
+        // --------------------------------------------------------
+
         int maxLoanWeeks =
-                systemSettingService.getIntSetting(
-                        "MAX_LOAN_WEEKS"
-                );
+                getRequiredSetting("MAX_LOAN_WEEKS").intValue();
 
-        /*
-         * Get maximum number of loan installments from settings.
-         */
         int maxLoanInstallments =
-                systemSettingService.getIntSetting(
-                        "MAX_LOAN_INSTALLMENTS"
-                );
+                getRequiredSetting("MAX_LOAN_INSTALLMENTS").intValue();
 
-        /*
-         * Validate loan settings.
-         */
         if (maxLoanWeeks <= 0) {
-            throw new RuntimeException(
-                    "MAX_LOAN_WEEKS must be greater than zero"
+            throw new IllegalArgumentException(
+                    "MAX_LOAN_WEEKS must be greater than zero."
             );
         }
 
         if (maxLoanInstallments <= 0) {
-            throw new RuntimeException(
-                    "MAX_LOAN_INSTALLMENTS must be greater than zero"
+            throw new IllegalArgumentException(
+                    "MAX_LOAN_INSTALLMENTS must be greater than zero."
             );
         }
 
-        /*
-         * Calculate interest.
-         *
-         * Example:
-         * Principal = 1,000,000
-         * Interest rate = 10%
-         * Interest = 100,000
-         */
+        // --------------------------------------------------------
+        // CALCULATE INTEREST
+        // --------------------------------------------------------
+
         BigDecimal interestAmount =
                 loan.getPrincipalAmount()
                         .multiply(loan.getInterestRate())
@@ -139,41 +123,44 @@ public class LoanService {
                                 RoundingMode.HALF_UP
                         );
 
+        // --------------------------------------------------------
+        // CALCULATE TOTAL LOAN
+        // --------------------------------------------------------
+
         BigDecimal totalAmount =
                 loan.getPrincipalAmount()
-                        .add(interestAmount)
-                        .setScale(2, RoundingMode.HALF_UP);
+                        .add(interestAmount);
 
-        /*
-         * Loan date
-         */
+        // --------------------------------------------------------
+        // LOAN DATE
+        // --------------------------------------------------------
+
         if (loan.getLoanDate() == null) {
             loan.setLoanDate(LocalDate.now());
         }
 
-        /*
-         * Maximum loan repayment period comes from
-         * MAX_LOAN_WEEKS setting.
-         */
-        LocalDate dueDate =
-                loan.getLoanDate()
-                        .plusWeeks(maxLoanWeeks);
+        // --------------------------------------------------------
+        // DUE DATE
+        // --------------------------------------------------------
 
-        loan.setDueDate(dueDate);
+        loan.setDueDate(
+                loan.getLoanDate().plusWeeks(maxLoanWeeks)
+        );
 
         loan.setInterestAmount(interestAmount);
         loan.setTotalAmount(totalAmount);
         loan.setStatus("ACTIVE");
 
-        /*
-         * Save loan first so that we get the generated ID.
-         */
+        // --------------------------------------------------------
+        // SAVE LOAN
+        // --------------------------------------------------------
+
         Loan savedLoan = loanRepository.save(loan);
 
-        /*
-         * Generate installments using the configured
-         * MAX_LOAN_INSTALLMENTS setting.
-         */
+        // --------------------------------------------------------
+        // CREATE INSTALLMENTS
+        // --------------------------------------------------------
+
         createInstallments(
                 savedLoan,
                 maxLoanInstallments
@@ -182,30 +169,27 @@ public class LoanService {
         return savedLoan;
     }
 
-    /*
-     * Create weekly installments for a loan.
-     */
+    // ============================================================
+    // CREATE INSTALLMENTS
+    // ============================================================
+
     private void createInstallments(
             Loan loan,
-            int maxLoanInstallments
+            int numberOfInstallments
     ) {
 
         BigDecimal totalAmount = loan.getTotalAmount();
 
-        /*
-         * Normal weekly installment.
-         */
-        BigDecimal weeklyAmount =
-                totalAmount
-                        .divide(
-                                BigDecimal.valueOf(maxLoanInstallments),
-                                2,
-                                RoundingMode.DOWN
-                        );
+        BigDecimal installmentAmount =
+                totalAmount.divide(
+                        BigDecimal.valueOf(numberOfInstallments),
+                        2,
+                        RoundingMode.DOWN
+                );
 
         BigDecimal totalCreated = BigDecimal.ZERO;
 
-        for (int i = 1; i <= maxLoanInstallments; i++) {
+        for (int i = 1; i <= numberOfInstallments; i++) {
 
             LoanInstallment installment =
                     new LoanInstallment();
@@ -213,133 +197,248 @@ public class LoanService {
             installment.setLoan(loan);
             installment.setInstallmentNumber(i);
 
-            /*
-             * Each installment is due one week after
-             * the previous installment.
-             */
+            BigDecimal amount;
+
+            // Last installment gets the remaining balance
+            if (i == numberOfInstallments) {
+
+                amount = totalAmount.subtract(totalCreated);
+
+            } else {
+
+                amount = installmentAmount;
+            }
+
+            installment.setAmount(
+                    amount.setScale(2, RoundingMode.HALF_UP)
+            );
+
             installment.setDueDate(
                     loan.getLoanDate().plusWeeks(i)
             );
 
-            BigDecimal installmentAmount;
-
-            /*
-             * The final installment receives the remaining
-             * amount so that all installments add up exactly
-             * to the total loan amount.
-             */
-            if (i == maxLoanInstallments) {
-
-                installmentAmount =
-                        totalAmount
-                                .subtract(totalCreated)
-                                .setScale(
-                                        2,
-                                        RoundingMode.HALF_UP
-                                );
-
-            } else {
-
-                installmentAmount = weeklyAmount;
-            }
-
-            installment.setAmount(installmentAmount);
             installment.setStatus("PENDING");
 
             loanInstallmentRepository.save(installment);
 
-            totalCreated =
-                    totalCreated.add(installmentAmount);
+            totalCreated = totalCreated.add(amount);
         }
     }
+
+    // ============================================================
+    // CHECK OVERDUE UNPAID INSTALLMENT
+    // ============================================================
+
+    private boolean hasOverdueUnpaidInstallment(Long memberId) {
+
+        List<Loan> memberLoans =
+                loanRepository.findByMemberId(memberId);
+
+        LocalDate today = LocalDate.now();
+
+        for (Loan loan : memberLoans) {
+
+            List<LoanInstallment> installments =
+                    loanInstallmentRepository.findByLoanId(
+                            loan.getId()
+                    );
+
+            for (LoanInstallment installment : installments) {
+
+                boolean isPaid =
+                        "PAID".equalsIgnoreCase(
+                                installment.getStatus()
+                        );
+
+                boolean hasDueDate =
+                        installment.getDueDate() != null;
+
+                boolean isOverdue =
+                        hasDueDate
+                                && installment.getDueDate().isBefore(today);
+
+                if (!isPaid && isOverdue) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // ============================================================
+    // GET ALL LOANS
+    // ============================================================
 
     public List<Loan> getAllLoans() {
         return loanRepository.findAll();
     }
 
+    // ============================================================
+    // GET LOAN BY ID
+    // ============================================================
+
     public Optional<Loan> getLoanById(Long id) {
         return loanRepository.findById(id);
     }
+
+    // ============================================================
+    // GET LOANS BY MEMBER
+    // ============================================================
 
     public List<Loan> getLoansByMember(Long memberId) {
         return loanRepository.findByMemberId(memberId);
     }
 
+    // ============================================================
+    // GET LOANS BY CYCLE
+    // ============================================================
+
     public List<Loan> getLoansByCycle(Long cycleId) {
         return loanRepository.findByCycleId(cycleId);
     }
+
+    // ============================================================
+    // GET LOANS BY MEMBER AND CYCLE
+    // ============================================================
 
     public List<Loan> getMemberLoansByCycle(
             Long memberId,
             Long cycleId
     ) {
+
         return loanRepository.findByMemberIdAndCycleId(
                 memberId,
                 cycleId
         );
     }
 
+    // ============================================================
+    // GET LOANS BY STATUS
+    // ============================================================
+
     public List<Loan> getLoansByStatus(String status) {
         return loanRepository.findByStatus(status);
     }
 
-    public Loan updateLoan(
-            Long id,
-            Loan updatedLoan
-    ) {
+    // ============================================================
+    // UPDATE LOAN
+    // ============================================================
 
-        Loan existingLoan =
-                loanRepository.findById(id)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Loan not found with id: " + id
-                                )
-                        );
+    @Transactional
+    public Loan updateLoan(Long id, Loan request) {
 
-        existingLoan.setMember(
-                updatedLoan.getMember()
-        );
+        Loan existingLoan = loanRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Loan not found with id: " + id
+                        )
+                );
 
-        existingLoan.setCycle(
-                updatedLoan.getCycle()
-        );
+        validateLoan(request);
+
+        // --------------------------------------------------------
+        // UPDATE MEMBER AND CYCLE
+        // --------------------------------------------------------
+
+        existingLoan.setMember(request.getMember());
+        existingLoan.setCycle(request.getCycle());
+
+        // --------------------------------------------------------
+        // UPDATE PRINCIPAL AND INTEREST RATE
+        // --------------------------------------------------------
 
         existingLoan.setPrincipalAmount(
-                updatedLoan.getPrincipalAmount()
+                request.getPrincipalAmount()
         );
 
         existingLoan.setInterestRate(
-                updatedLoan.getInterestRate()
+                request.getInterestRate()
         );
 
-        existingLoan.setInterestAmount(
-                updatedLoan.getInterestAmount()
-        );
+        // --------------------------------------------------------
+        // RECALCULATE INTEREST
+        // --------------------------------------------------------
 
-        existingLoan.setTotalAmount(
-                updatedLoan.getTotalAmount()
-        );
+        BigDecimal interestAmount =
+                request.getPrincipalAmount()
+                        .multiply(request.getInterestRate())
+                        .divide(
+                                BigDecimal.valueOf(100),
+                                2,
+                                RoundingMode.HALF_UP
+                        );
 
-        existingLoan.setLoanDate(
-                updatedLoan.getLoanDate()
-        );
+        // --------------------------------------------------------
+        // RECALCULATE TOTAL AMOUNT
+        // --------------------------------------------------------
+
+        BigDecimal totalAmount =
+                request.getPrincipalAmount()
+                        .add(interestAmount);
+
+        existingLoan.setInterestAmount(interestAmount);
+        existingLoan.setTotalAmount(totalAmount);
+
+        // --------------------------------------------------------
+        // UPDATE LOAN DATE
+        // --------------------------------------------------------
+
+        if (request.getLoanDate() != null) {
+
+            existingLoan.setLoanDate(
+                    request.getLoanDate()
+            );
+
+        } else if (existingLoan.getLoanDate() == null) {
+
+            existingLoan.setLoanDate(
+                    LocalDate.now()
+            );
+        }
+
+        // --------------------------------------------------------
+        // RECALCULATE DUE DATE
+        // --------------------------------------------------------
+
+        int maxLoanWeeks =
+                getRequiredSetting("MAX_LOAN_WEEKS").intValue();
+
+        if (maxLoanWeeks <= 0) {
+            throw new IllegalArgumentException(
+                    "MAX_LOAN_WEEKS must be greater than zero."
+            );
+        }
 
         existingLoan.setDueDate(
-                updatedLoan.getDueDate()
+                existingLoan.getLoanDate()
+                        .plusWeeks(maxLoanWeeks)
         );
 
-        existingLoan.setStatus(
-                updatedLoan.getStatus()
-        );
+        // --------------------------------------------------------
+        // UPDATE STATUS
+        // --------------------------------------------------------
+
+        if (request.getStatus() != null
+                && !request.getStatus().isBlank()) {
+
+            existingLoan.setStatus(
+                    request.getStatus()
+            );
+        }
 
         return loanRepository.save(existingLoan);
     }
 
+    // ============================================================
+    // DELETE LOAN
+    // ============================================================
+
+    @Transactional
     public void deleteLoan(Long id) {
 
         if (!loanRepository.existsById(id)) {
-
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Loan not found with id: " + id
             );
         }
@@ -347,48 +446,78 @@ public class LoanService {
         loanRepository.deleteById(id);
     }
 
-    /*
-     * Validate loan data before processing.
-     */
+    // ============================================================
+    // VALIDATE LOAN
+    // ============================================================
+
     private void validateLoan(Loan loan) {
 
         if (loan == null) {
-            throw new RuntimeException(
-                    "Loan data cannot be null"
+            throw new IllegalArgumentException(
+                    "Loan data cannot be null."
             );
         }
 
-        if (loan.getMember() == null ||
-                loan.getMember().getId() == null) {
+        if (loan.getMember() == null
+                || loan.getMember().getId() == null) {
 
-            throw new RuntimeException(
-                    "Member is required"
+            throw new IllegalArgumentException(
+                    "Member is required."
             );
         }
 
-        if (loan.getCycle() == null ||
-                loan.getCycle().getId() == null) {
+        if (loan.getCycle() == null
+                || loan.getCycle().getId() == null) {
 
-            throw new RuntimeException(
-                    "Financial cycle is required"
+            throw new IllegalArgumentException(
+                    "Financial cycle is required."
             );
         }
 
-        if (loan.getPrincipalAmount() == null ||
-                loan.getPrincipalAmount()
-                        .compareTo(BigDecimal.ZERO) <= 0) {
+        if (loan.getPrincipalAmount() == null
+                || loan.getPrincipalAmount()
+                .compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new RuntimeException(
-                    "Principal amount must be greater than zero"
+            throw new IllegalArgumentException(
+                    "Principal amount must be greater than zero."
             );
         }
 
-        if (loan.getInterestRate() == null ||
-                loan.getInterestRate()
-                        .compareTo(BigDecimal.ZERO) < 0) {
+        if (loan.getInterestRate() == null
+                || loan.getInterestRate()
+                .compareTo(BigDecimal.ZERO) < 0) {
 
-            throw new RuntimeException(
-                    "Interest rate cannot be negative"
+            throw new IllegalArgumentException(
+                    "Interest rate cannot be negative."
+            );
+        }
+    }
+
+    // ============================================================
+    // GET REQUIRED SYSTEM SETTING
+    // ============================================================
+
+    private BigDecimal getRequiredSetting(String key) {
+
+        String value =
+                systemSettingService
+                        .getSettingValue(key);
+
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Required system setting not found: " + key
+            );
+        }
+
+        try {
+
+            return new BigDecimal(value);
+
+        } catch (NumberFormatException e) {
+
+            throw new IllegalArgumentException(
+                    "Invalid numeric value for system setting: "
+                            + key
             );
         }
     }

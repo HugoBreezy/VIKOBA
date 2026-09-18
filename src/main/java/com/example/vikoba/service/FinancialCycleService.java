@@ -4,7 +4,6 @@ import com.example.vikoba.entity.FinancialCycle;
 import com.example.vikoba.repository.FinancialCycleRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,7 +35,7 @@ public class FinancialCycleService {
                 cycle.getName()
         )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle with this name already exists: "
                             + cycle.getName()
             );
@@ -66,7 +65,7 @@ public class FinancialCycleService {
 
             if (openCycle.isPresent()) {
 
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                         "Another financial cycle is already OPEN. "
                                 + "Close the current cycle before opening a new one."
                 );
@@ -117,7 +116,7 @@ public class FinancialCycleService {
         FinancialCycle existingCycle =
                 financialCycleRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Financial cycle not found with id: "
                                                 + id
                                 )
@@ -138,7 +137,7 @@ public class FinancialCycleService {
                         updatedCycle.getName()
                 )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle with this name already exists: "
                             + updatedCycle.getName()
             );
@@ -161,11 +160,23 @@ public class FinancialCycleService {
                             .getId()
                             .equals(id)) {
 
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                         "Another financial cycle is already OPEN. "
                                 + "Close it before opening this cycle."
                 );
             }
+        }
+
+        /*
+         * If no status is supplied during update,
+         * keep the existing status.
+         */
+        if (updatedCycle.getStatus() == null ||
+                updatedCycle.getStatus().isBlank()) {
+
+            updatedCycle.setStatus(
+                    existingCycle.getStatus()
+            );
         }
 
         existingCycle.setName(
@@ -196,7 +207,7 @@ public class FinancialCycleService {
 
         if (!financialCycleRepository.existsById(id)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle not found with id: "
                             + id
             );
@@ -214,7 +225,7 @@ public class FinancialCycleService {
 
         if (cycle == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle data cannot be null"
             );
         }
@@ -225,7 +236,7 @@ public class FinancialCycleService {
         if (cycle.getName() == null ||
                 cycle.getName().isBlank()) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle name is required"
             );
         }
@@ -235,7 +246,7 @@ public class FinancialCycleService {
          */
         if (cycle.getStartDate() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle start date is required"
             );
         }
@@ -245,7 +256,7 @@ public class FinancialCycleService {
          */
         if (cycle.getEndDate() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle end date is required"
             );
         }
@@ -257,7 +268,7 @@ public class FinancialCycleService {
                 cycle.getStartDate()
         )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle end date must be after start date"
             );
         }
@@ -275,7 +286,7 @@ public class FinancialCycleService {
                     !status.equals("CLOSED") &&
                     !status.equals("PENDING")) {
 
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                         "Invalid financial cycle status. "
                                 + "Allowed values: OPEN, CLOSED, PENDING"
                 );

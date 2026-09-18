@@ -31,6 +31,10 @@ public class LoanPaymentService {
         this.penaltyRepository = penaltyRepository;
     }
 
+    // ============================================================
+    // CREATE PAYMENT
+    // ============================================================
+
     /*
      * Record a payment for an installment.
      *
@@ -266,13 +270,25 @@ public class LoanPaymentService {
         return savedPayment;
     }
 
+    // ============================================================
+    // GET ALL PAYMENTS
+    // ============================================================
+
     public List<LoanPayment> getAllPayments() {
         return loanPaymentRepository.findAll();
     }
 
+    // ============================================================
+    // GET PAYMENT BY ID
+    // ============================================================
+
     public Optional<LoanPayment> getPaymentById(Long id) {
         return loanPaymentRepository.findById(id);
     }
+
+    // ============================================================
+    // GET PAYMENTS BY INSTALLMENT
+    // ============================================================
 
     public List<LoanPayment> getPaymentsByInstallment(
             Long installmentId
@@ -283,12 +299,20 @@ public class LoanPaymentService {
         );
     }
 
+    // ============================================================
+    // GET PAYMENTS BY USER
+    // ============================================================
+
     public List<LoanPayment> getPaymentsByUser(Long userId) {
 
         return loanPaymentRepository.findByRecordedById(
                 userId
         );
     }
+
+    // ============================================================
+    // GET PAYMENTS BETWEEN DATES
+    // ============================================================
 
     public List<LoanPayment> getPaymentsBetweenDates(
             LocalDate startDate,
@@ -297,14 +321,14 @@ public class LoanPaymentService {
 
         if (startDate == null || endDate == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Start date and end date are required"
             );
         }
 
         if (endDate.isBefore(startDate)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "End date cannot be before start date"
             );
         }
@@ -315,9 +339,11 @@ public class LoanPaymentService {
         );
     }
 
-    /*
-     * Update an existing payment.
-     */
+    // ============================================================
+    // UPDATE PAYMENT
+    // ============================================================
+
+    @Transactional
     public LoanPayment updatePayment(
             Long id,
             LoanPayment updatedPayment
@@ -326,7 +352,7 @@ public class LoanPaymentService {
         LoanPayment existingPayment =
                 loanPaymentRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Payment not found with id: "
                                                 + id
                                 )
@@ -334,24 +360,46 @@ public class LoanPaymentService {
 
         validatePayment(updatedPayment);
 
-        LoanInstallment installment =
+        /*
+         * Remember the old installment because the payment
+         * may be moved to another installment.
+         */
+        LoanInstallment oldInstallment =
+                existingPayment.getInstallment();
+
+        /*
+         * Load the new installment from database.
+         */
+        Long newInstallmentId =
+                updatedPayment
+                        .getInstallment()
+                        .getId();
+
+        LoanInstallment newInstallment =
                 loanInstallmentRepository
-                        .findById(
-                                updatedPayment
-                                        .getInstallment()
-                                        .getId()
-                        )
+                        .findById(newInstallmentId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Installment not found with id: "
-                                                + updatedPayment
-                                                .getInstallment()
-                                                .getId()
+                                                + newInstallmentId
                                 )
                         );
 
+        /*
+         * Payment date.
+         */
+        LocalDate paymentDate =
+                updatedPayment.getPaymentDate();
+
+        if (paymentDate == null) {
+            paymentDate = LocalDate.now();
+        }
+
+        /*
+         * Update payment fields.
+         */
         existingPayment.setInstallment(
-                installment
+                newInstallment
         );
 
         existingPayment.setAmount(
@@ -359,7 +407,7 @@ public class LoanPaymentService {
         );
 
         existingPayment.setPaymentDate(
-                updatedPayment.getPaymentDate()
+                paymentDate
         );
 
         existingPayment.setRecordedBy(
@@ -374,36 +422,207 @@ public class LoanPaymentService {
                 updatedPayment.getNotes()
         );
 
-        return loanPaymentRepository.save(
-                existingPayment
-        );
-    }
+        /*
+         * Save updated payment.
+         */
+        LoanPayment savedPayment =
+                loanPaymentRepository.save(
+                        existingPayment
+                );
 
-    /*
-     * Delete a payment.
-     */
-    public void deletePayment(Long id) {
+        /*
+         * Recalculate the old installment.
+         *
+         * This is important if the payment was moved
+         * from one installment to another.
+         */
+        if (oldInstallment != null) {
 
-        if (!loanPaymentRepository.existsById(id)) {
-
-            throw new RuntimeException(
-                    "Payment not found with id: " + id
+            recalculateInstallmentAndPenalty(
+                    oldInstallment.getId()
             );
         }
 
-        loanPaymentRepository.deleteById(id);
+        /*
+         * Recalculate the new installment.
+         */
+        if (newInstallment.getId() != null) {
+
+            recalculateInstallmentAndPenalty(
+                    newInstallment.getId()
+            );
+        }
+
+        return savedPayment;
     }
 
-    /*
-     * Validate payment information.
-     */
+    // ============================================================
+    // RECALCULATE INSTALLMENT AND PENALTY
+    // ============================================================
+
+    private void recalculateInstallmentAndPenalty(
+            Long installmentId
+    ) {
+
+        LoanInstallment installment =
+                loanInstallmentRepository.findById(
+                        installmentId
+                ).orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Installment not found with id: "
+                                        + installmentId
+                        )
+                );
+
+        /*
+         * Get all payments for this installment.
+         */
+        List<LoanPayment> payments =
+                loanPaymentRepository.findByInstallmentId(
+                        installmentId
+                );
+
+        BigDecimal totalPaid = BigDecimal.ZERO;
+
+        for (LoanPayment payment : payments) {
+
+            if (payment.getAmount() != null) {
+
+                totalPaid =
+                        totalPaid.add(
+                                payment.getAmount()
+                        );
+            }
+        }
+
+        totalPaid = totalPaid.setScale(2);
+
+        /*
+         * Update installment status.
+         */
+        if (totalPaid.compareTo(
+                installment.getAmount()
+        ) >= 0) {
+
+            installment.setStatus("PAID");
+
+        } else if (totalPaid.compareTo(
+                BigDecimal.ZERO
+        ) > 0) {
+
+            installment.setStatus("PARTIAL");
+
+        } else {
+
+            installment.setStatus("PENDING");
+        }
+
+        loanInstallmentRepository.save(
+                installment
+        );
+
+        /*
+         * Find penalty for this installment.
+         */
+        Optional<Penalty> penaltyOptional =
+                penaltyRepository
+                        .findByInstallmentIdAndStatus(
+                                installmentId,
+                                "PENDING"
+                        );
+
+        /*
+         * If there is no pending penalty,
+         * there is nothing else to update.
+         */
+        if (penaltyOptional.isEmpty()) {
+            return;
+        }
+
+        Penalty penalty =
+                penaltyOptional.get();
+
+        if (penalty.getPenaltyAmount() == null) {
+            return;
+        }
+
+        /*
+         * Penalty can only be considered paid
+         * after the installment itself is fully paid.
+         *
+         * Any amount above the installment amount
+         * is treated as money available for penalty.
+         */
+        if ("PAID".equalsIgnoreCase(
+                installment.getStatus()
+        )) {
+
+            BigDecimal amountAvailableForPenalty =
+                    totalPaid
+                            .subtract(installment.getAmount())
+                            .setScale(2);
+
+            if (amountAvailableForPenalty.compareTo(
+                    penalty.getPenaltyAmount()
+            ) >= 0) {
+
+                penalty.setStatus("PAID");
+
+                penaltyRepository.save(
+                        penalty
+                );
+            }
+        }
+    }
+
+    // ============================================================
+    // DELETE PAYMENT
+    // ============================================================
+
+    @Transactional
+    public void deletePayment(Long id) {
+
+        LoanPayment existingPayment =
+                loanPaymentRepository.findById(id)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Payment not found with id: "
+                                                + id
+                                )
+                        );
+
+        Long installmentId =
+                existingPayment.getInstallment() != null
+                        ? existingPayment
+                        .getInstallment()
+                        .getId()
+                        : null;
+
+        loanPaymentRepository.deleteById(id);
+
+        /*
+         * After deleting a payment, recalculate the
+         * installment status.
+         */
+        if (installmentId != null) {
+
+            recalculateInstallmentAndPenalty(
+                    installmentId
+            );
+        }
+    }
+
+    // ============================================================
+    // VALIDATE PAYMENT
+    // ============================================================
+
     private void validatePayment(
             LoanPayment payment
     ) {
 
         if (payment == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Payment data cannot be null"
             );
         }
@@ -414,7 +633,7 @@ public class LoanPaymentService {
         if (payment.getInstallment() == null ||
                 payment.getInstallment().getId() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Installment is required"
             );
         }
@@ -426,7 +645,7 @@ public class LoanPaymentService {
                 payment.getAmount()
                         .compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Payment amount must be greater than zero"
             );
         }
@@ -438,7 +657,7 @@ public class LoanPaymentService {
                 payment.getPaymentDate()
                         .isAfter(LocalDate.now())) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Payment date cannot be in the future"
             );
         }

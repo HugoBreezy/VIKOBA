@@ -2,6 +2,7 @@ package com.example.vikoba.service;
 
 import com.example.vikoba.entity.FinancialCycle;
 import com.example.vikoba.entity.Meeting;
+import com.example.vikoba.repository.FinancialCycleRepository;
 import com.example.vikoba.repository.MeetingRepository;
 import org.springframework.stereotype.Service;
 
@@ -13,11 +14,14 @@ import java.util.Optional;
 public class MeetingService {
 
     private final MeetingRepository meetingRepository;
+    private final FinancialCycleRepository financialCycleRepository;
 
     public MeetingService(
-            MeetingRepository meetingRepository
+            MeetingRepository meetingRepository,
+            FinancialCycleRepository financialCycleRepository
     ) {
         this.meetingRepository = meetingRepository;
+        this.financialCycleRepository = financialCycleRepository;
     }
 
     /*
@@ -34,6 +38,28 @@ public class MeetingService {
                 meeting.getMeetingNumber();
 
         /*
+         * Load the real financial cycle from
+         * the database.
+         */
+        FinancialCycle cycle =
+                financialCycleRepository.findById(cycleId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Financial cycle not found with id: "
+                                                + cycleId
+                                )
+                        );
+
+        /*
+         * Validate the meeting date against
+         * the actual cycle dates from database.
+         */
+        validateMeetingDate(
+                meeting.getMeetingDate(),
+                cycle
+        );
+
+        /*
          * A meeting number can only appear once
          * within the same financial cycle.
          */
@@ -43,12 +69,17 @@ public class MeetingService {
                         meetingNumber
                 )) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting number "
                             + meetingNumber
                             + " already exists in this financial cycle"
             );
         }
+
+        /*
+         * Attach the real cycle entity.
+         */
+        meeting.setCycle(cycle);
 
         return meetingRepository.save(meeting);
     }
@@ -69,7 +100,7 @@ public class MeetingService {
 
         if (cycleId == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle ID is required"
             );
         }
@@ -86,7 +117,7 @@ public class MeetingService {
 
         if (cycleId == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle ID is required"
             );
         }
@@ -94,7 +125,7 @@ public class MeetingService {
         if (meetingNumber == null ||
                 meetingNumber < 1) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting number must be greater than zero"
             );
         }
@@ -135,7 +166,7 @@ public class MeetingService {
         Meeting existingMeeting =
                 meetingRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Meeting not found with id: "
                                                 + id
                                 )
@@ -148,6 +179,28 @@ public class MeetingService {
 
         Integer newMeetingNumber =
                 updatedMeeting.getMeetingNumber();
+
+        /*
+         * Load the real financial cycle from
+         * the database.
+         */
+        FinancialCycle cycle =
+                financialCycleRepository.findById(newCycleId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Financial cycle not found with id: "
+                                                + newCycleId
+                                )
+                        );
+
+        /*
+         * Validate the meeting date against
+         * the actual cycle dates.
+         */
+        validateMeetingDate(
+                updatedMeeting.getMeetingDate(),
+                cycle
+        );
 
         /*
          * Check if the new meeting number is already
@@ -165,16 +218,14 @@ public class MeetingService {
                         .getId()
                         .equals(id)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting number "
                             + newMeetingNumber
                             + " already exists in this financial cycle"
             );
         }
 
-        existingMeeting.setCycle(
-                updatedMeeting.getCycle()
-        );
+        existingMeeting.setCycle(cycle);
 
         existingMeeting.setMeetingDate(
                 updatedMeeting.getMeetingDate()
@@ -200,7 +251,7 @@ public class MeetingService {
 
         if (!meetingRepository.existsById(id)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting not found with id: " + id
             );
         }
@@ -209,7 +260,7 @@ public class MeetingService {
     }
 
     /*
-     * Validate meeting information.
+     * Basic meeting validation.
      */
     private void validateMeeting(
             Meeting meeting
@@ -217,7 +268,7 @@ public class MeetingService {
 
         if (meeting == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting data cannot be null"
             );
         }
@@ -228,7 +279,7 @@ public class MeetingService {
         if (meeting.getCycle() == null ||
                 meeting.getCycle().getId() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle is required"
             );
         }
@@ -238,7 +289,7 @@ public class MeetingService {
          */
         if (meeting.getMeetingDate() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting date is required"
             );
         }
@@ -249,39 +300,8 @@ public class MeetingService {
         if (meeting.getMeetingNumber() == null ||
                 meeting.getMeetingNumber() < 1) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting number must be greater than zero"
-            );
-        }
-
-        /*
-         * Meeting date must fall within
-         * the financial cycle dates.
-         */
-        FinancialCycle cycle =
-                meeting.getCycle();
-
-        LocalDate startDate =
-                cycle.getStartDate();
-
-        LocalDate endDate =
-                cycle.getEndDate();
-
-        if (startDate != null &&
-                meeting.getMeetingDate()
-                        .isBefore(startDate)) {
-
-            throw new RuntimeException(
-                    "Meeting date cannot be before the financial cycle start date"
-            );
-        }
-
-        if (endDate != null &&
-                meeting.getMeetingDate()
-                        .isAfter(endDate)) {
-
-            throw new RuntimeException(
-                    "Meeting date cannot be after the financial cycle end date"
             );
         }
 
@@ -291,8 +311,44 @@ public class MeetingService {
         if (meeting.getMeetingDate()
                 .isAfter(LocalDate.now())) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting date cannot be in the future"
+            );
+        }
+    }
+
+    /*
+     * Validate meeting date against the
+     * actual financial cycle dates.
+     */
+    private void validateMeetingDate(
+            LocalDate meetingDate,
+            FinancialCycle cycle
+    ) {
+
+        if (cycle.getStartDate() == null ||
+                cycle.getEndDate() == null) {
+
+            throw new IllegalArgumentException(
+                    "Financial cycle dates are required"
+            );
+        }
+
+        if (meetingDate.isBefore(
+                cycle.getStartDate()
+        )) {
+
+            throw new IllegalArgumentException(
+                    "Meeting date cannot be before the financial cycle start date"
+            );
+        }
+
+        if (meetingDate.isAfter(
+                cycle.getEndDate()
+        )) {
+
+            throw new IllegalArgumentException(
+                    "Meeting date cannot be after the financial cycle end date"
             );
         }
     }

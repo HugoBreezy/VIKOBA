@@ -64,7 +64,7 @@ public class ContributionService {
     ) {
 
         if (memberId == null) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member ID is required"
             );
         }
@@ -79,7 +79,7 @@ public class ContributionService {
     ) {
 
         if (cycleId == null) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle ID is required"
             );
         }
@@ -95,13 +95,13 @@ public class ContributionService {
     ) {
 
         if (memberId == null) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member ID is required"
             );
         }
 
         if (cycleId == null) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle ID is required"
             );
         }
@@ -117,11 +117,10 @@ public class ContributionService {
      * Get total contribution of a member
      * in a financial cycle.
      *
-     * This value is used for:
-     *
      * Maximum Loan = Contributions × Loan Multiplier
      *
-     * and Share-Out calculation.
+     * This value is also used for
+     * Share-Out calculation.
      */
     public BigDecimal getMemberTotalContribution(
             Long memberId,
@@ -129,13 +128,13 @@ public class ContributionService {
     ) {
 
         if (memberId == null) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member ID is required"
             );
         }
 
         if (cycleId == null) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle ID is required"
             );
         }
@@ -165,7 +164,7 @@ public class ContributionService {
         Contribution existingContribution =
                 contributionRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Contribution not found with id: "
                                                 + id
                                 )
@@ -191,13 +190,24 @@ public class ContributionService {
                 updatedContribution.getAmount()
         );
 
-        existingContribution.setContributionDate(
-                updatedContribution.getContributionDate()
-        );
+        /*
+         * If no date is supplied during update,
+         * keep the existing contribution date.
+         */
+        if (updatedContribution.getContributionDate() != null) {
 
-        existingContribution.setRecordedBy(
-                updatedContribution.getRecordedBy()
-        );
+            existingContribution.setContributionDate(
+                    updatedContribution.getContributionDate()
+            );
+        }
+
+        /*
+         * Do NOT allow recordedBy to be changed
+         * through the update request.
+         *
+         * The original recorder remains attached
+         * to this contribution.
+         */
 
         return contributionRepository.save(
                 existingContribution
@@ -211,7 +221,7 @@ public class ContributionService {
 
         if (!contributionRepository.existsById(id)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Contribution not found with id: " + id
             );
         }
@@ -228,7 +238,7 @@ public class ContributionService {
 
         if (contribution == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Contribution data cannot be null"
             );
         }
@@ -239,7 +249,7 @@ public class ContributionService {
         if (contribution.getMember() == null ||
                 contribution.getMember().getId() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Member is required"
             );
         }
@@ -250,7 +260,7 @@ public class ContributionService {
         if (contribution.getCycle() == null ||
                 contribution.getCycle().getId() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle is required"
             );
         }
@@ -261,7 +271,7 @@ public class ContributionService {
         if (contribution.getMeeting() == null ||
                 contribution.getMeeting().getId() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Meeting is required"
             );
         }
@@ -275,7 +285,7 @@ public class ContributionService {
                 contribution.getAmount()
                         .compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Contribution amount must be greater than zero"
             );
         }
@@ -287,7 +297,7 @@ public class ContributionService {
                 contribution.getContributionDate()
                         .isAfter(LocalDate.now())) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Contribution date cannot be in the future"
             );
         }
