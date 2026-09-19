@@ -3,6 +3,7 @@ package com.example.vikoba.controller;
 import com.example.vikoba.entity.Penalty;
 import com.example.vikoba.service.PenaltyService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,11 +15,17 @@ public class PenaltyController {
 
     private final PenaltyService penaltyService;
 
-    public PenaltyController(PenaltyService penaltyService) {
+    public PenaltyController(
+            PenaltyService penaltyService
+    ) {
         this.penaltyService = penaltyService;
     }
 
+    /*
+     * ADMIN ONLY
+     */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Penalty> createPenalty(
             @RequestBody Penalty penalty
     ) {
@@ -27,14 +34,22 @@ public class PenaltyController {
         );
     }
 
+    /*
+     * USER + ADMIN
+     */
     @GetMapping
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<List<Penalty>> getAllPenalties() {
         return ResponseEntity.ok(
                 penaltyService.getAllPenalties()
         );
     }
 
+    /*
+     * USER + ADMIN
+     */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<Penalty> getPenaltyById(
             @PathVariable Long id
     ) {
@@ -43,7 +58,11 @@ public class PenaltyController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /*
+     * USER + ADMIN
+     */
     @GetMapping("/installment/{installmentId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<List<Penalty>> getPenaltiesByInstallment(
             @PathVariable Long installmentId
     ) {
@@ -54,8 +73,13 @@ public class PenaltyController {
         );
     }
 
+    /*
+     * USER + ADMIN
+     */
     @GetMapping("/installment/{installmentId}/status/{status}")
-    public ResponseEntity<Penalty> getPenaltyByInstallmentAndStatus(
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<Penalty>
+    getPenaltyByInstallmentAndStatus(
             @PathVariable Long installmentId,
             @PathVariable String status
     ) {
@@ -68,7 +92,11 @@ public class PenaltyController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /*
+     * USER + ADMIN
+     */
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<List<Penalty>> getPenaltiesByStatus(
             @PathVariable String status
     ) {
@@ -77,7 +105,11 @@ public class PenaltyController {
         );
     }
 
+    /*
+     * ADMIN ONLY
+     */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Penalty> updatePenalty(
             @PathVariable Long id,
             @RequestBody Penalty penalty
@@ -87,7 +119,11 @@ public class PenaltyController {
         );
     }
 
+    /*
+     * ADMIN ONLY
+     */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletePenalty(
             @PathVariable Long id
     ) {

@@ -25,6 +25,9 @@ public class UserService {
 
     /*
      * Create a new user.
+     *
+     * Public registration must ALWAYS create USER.
+     * The client is not allowed to choose ADMIN role.
      */
     public User saveUser(User user) {
 
@@ -44,19 +47,14 @@ public class UserService {
         }
 
         /*
-         * Default role.
+         * Public registration always creates USER.
+         *
+         * Even if the client sends:
+         * "role": "ADMIN"
+         *
+         * it will be ignored.
          */
-        if (user.getRole() == null ||
-                user.getRole().isBlank()) {
-
-            user.setRole("USER");
-
-        } else {
-
-            user.setRole(
-                    user.getRole().toUpperCase()
-            );
-        }
+        user.setRole("USER");
 
         /*
          * Encode password before saving.
@@ -115,6 +113,9 @@ public class UserService {
 
     /*
      * Update an existing user.
+     *
+     * This endpoint is protected by ADMIN role
+     * in SecurityConfig.
      */
     public User updateUser(
             Long id,
@@ -162,7 +163,7 @@ public class UserService {
         );
 
         /*
-         * Keep existing role if no new role is supplied.
+         * Keep existing role if no role is supplied.
          */
         if (updatedUser.getRole() == null ||
                 updatedUser.getRole().isBlank()) {
@@ -235,7 +236,10 @@ public class UserService {
         }
 
         /*
-         * Validate role if supplied.
+         * Validate role only when supplied.
+         *
+         * saveUser() will still force USER for
+         * public registration.
          */
         if (user.getRole() != null &&
                 !user.getRole().isBlank()) {
