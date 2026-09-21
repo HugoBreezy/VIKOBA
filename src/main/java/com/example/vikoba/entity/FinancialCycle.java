@@ -1,11 +1,13 @@
 package com.example.vikoba.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "financial_cycles")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class FinancialCycle {
 
     @Id

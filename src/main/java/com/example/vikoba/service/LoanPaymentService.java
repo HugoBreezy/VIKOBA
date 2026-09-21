@@ -42,6 +42,7 @@ public class LoanPaymentService {
      *
      * 1. Installment only
      * 2. Installment + penalty
+     * 3. Penalty only when installment is already PAID
      *
      * Example:
      *
@@ -63,24 +64,11 @@ public class LoanPaymentService {
         LoanInstallment installment =
                 loanInstallmentRepository.findById(installmentId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Installment not found with id: "
                                                 + installmentId
                                 )
                         );
-
-        /*
-         * Do not allow payment on an already fully
-         * paid installment.
-         */
-        if ("PAID".equalsIgnoreCase(
-                installment.getStatus()
-        )) {
-
-            throw new RuntimeException(
-                    "This installment has already been fully paid"
-            );
-        }
 
         /*
          * Get all previous payments for this installment.
@@ -103,21 +91,21 @@ public class LoanPaymentService {
             }
         }
 
+        alreadyPaid = alreadyPaid.setScale(2);
+
         /*
          * Remaining installment amount.
+         *
+         * If installment is already PAID, this becomes ZERO.
+         * That allows us to pay a pending penalty separately.
          */
         BigDecimal remainingInstallment =
                 installment.getAmount()
                         .subtract(alreadyPaid)
                         .setScale(2);
 
-        if (remainingInstallment.compareTo(
-                BigDecimal.ZERO
-        ) <= 0) {
-
-            throw new RuntimeException(
-                    "There is no remaining amount for this installment"
-            );
+        if (remainingInstallment.compareTo(BigDecimal.ZERO) < 0) {
+            remainingInstallment = BigDecimal.ZERO;
         }
 
         /*
@@ -142,9 +130,27 @@ public class LoanPaymentService {
         }
 
         /*
-         * Total amount required to clear:
+         * If installment is already PAID and there is
+         * no pending penalty, there is nothing to pay.
+         */
+        if ("PAID".equalsIgnoreCase(installment.getStatus())
+                && penaltyAmount.compareTo(BigDecimal.ZERO) <= 0) {
+
+            throw new IllegalArgumentException(
+                    "This installment and its penalty have already been fully paid"
+            );
+        }
+
+        /*
+         * Total amount currently due.
          *
-         * remaining installment + pending penalty
+         * If installment is PAID:
+         *
+         * remainingInstallment = 0
+         *
+         * therefore:
+         *
+         * totalDue = penalty only
          */
         BigDecimal totalDue =
                 remainingInstallment
@@ -152,13 +158,12 @@ public class LoanPaymentService {
                         .setScale(2);
 
         /*
-         * Do not allow payment above the installment
-         * plus penalty.
+         * Do not allow payment above the total amount due.
          */
         if (payment.getAmount()
                 .compareTo(totalDue) > 0) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Payment exceeds the total amount due. "
                             + "Total due: "
                             + totalDue
@@ -197,6 +202,10 @@ public class LoanPaymentService {
         /*
          * First allocate payment to the
          * remaining installment.
+         *
+         * If installment is already PAID,
+         * remainingInstallment = 0,
+         * so amountForInstallment = 0.
          */
         BigDecimal amountForInstallment =
                 paymentAmount.min(
@@ -226,18 +235,26 @@ public class LoanPaymentService {
 
             installment.setStatus("PAID");
 
-        } else {
+        } else if (totalInstallmentPaid.compareTo(
+                BigDecimal.ZERO
+        ) > 0) {
 
             installment.setStatus("PARTIAL");
+
+        } else {
+
+            installment.setStatus("PENDING");
         }
 
         loanInstallmentRepository.save(installment);
 
         /*
-         * If there is a pending penalty and
-         * payment has money remaining after
-         * clearing the installment, use that
-         * remaining amount to clear the penalty.
+         * Handle pending penalty.
+         *
+         * This now supports:
+         *
+         * A. Installment + penalty
+         * B. Penalty only
          */
         if (pendingPenalty.isPresent() &&
                 remainingAfterInstallment
@@ -251,11 +268,8 @@ public class LoanPaymentService {
                             .setScale(2);
 
             /*
-             * At the moment we support clearing
-             * the penalty completely.
-             *
-             * If payment is not enough to clear
-             * the penalty, it remains PENDING.
+             * If the payment is enough to clear
+             * the pending penalty, mark it PAID.
              */
             if (remainingAfterInstallment.compareTo(
                     currentPenalty

@@ -3,7 +3,6 @@ package com.example.vikoba.controller;
 import com.example.vikoba.entity.ShareOutDetail;
 import com.example.vikoba.service.ShareOutDetailService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,11 +20,7 @@ public class ShareOutDetailController {
         this.shareOutDetailService = shareOutDetailService;
     }
 
-    /*
-     * ADMIN ONLY
-     */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ShareOutDetail> createShareOutDetail(
             @RequestBody ShareOutDetail detail
     ) {
@@ -34,35 +29,24 @@ public class ShareOutDetailController {
         );
     }
 
-    /*
-     * USER + ADMIN
-     */
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<List<ShareOutDetail>> getAllShareOutDetails() {
         return ResponseEntity.ok(
                 shareOutDetailService.getAllShareOutDetails()
         );
     }
 
-    /*
-     * USER + ADMIN
-     */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<ShareOutDetail> getShareOutDetailById(
             @PathVariable Long id
     ) {
-        return shareOutDetailService.getShareOutDetailById(id)
+        return shareOutDetailService
+                .getShareOutDetailById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /*
-     * USER + ADMIN
-     */
     @GetMapping("/share-out/{shareOutId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<List<ShareOutDetail>> getDetailsByShareOut(
             @PathVariable Long shareOutId
     ) {
@@ -73,11 +57,7 @@ public class ShareOutDetailController {
         );
     }
 
-    /*
-     * USER + ADMIN
-     */
     @GetMapping("/member/{memberId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<List<ShareOutDetail>> getDetailsByMember(
             @PathVariable Long memberId
     ) {
@@ -88,11 +68,7 @@ public class ShareOutDetailController {
         );
     }
 
-    /*
-     * USER + ADMIN
-     */
     @GetMapping("/share-out/{shareOutId}/member/{memberId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<ShareOutDetail> getMemberShareOutDetail(
             @PathVariable Long shareOutId,
             @PathVariable Long memberId
@@ -106,11 +82,7 @@ public class ShareOutDetailController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /*
-     * USER + ADMIN
-     */
     @GetMapping("/payment-status/{paymentStatus}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<List<ShareOutDetail>>
     getDetailsByPaymentStatus(
             @PathVariable String paymentStatus
@@ -123,11 +95,7 @@ public class ShareOutDetailController {
         );
     }
 
-    /*
-     * ADMIN ONLY
-     */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ShareOutDetail> updateShareOutDetail(
             @PathVariable Long id,
             @RequestBody ShareOutDetail detail
@@ -140,11 +108,16 @@ public class ShareOutDetailController {
         );
     }
 
-    /*
-     * ADMIN ONLY
-     */
+    @PatchMapping("/{id}/pay")
+    public ResponseEntity<ShareOutDetail> markAsPaid(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(
+                shareOutDetailService.markAsPaid(id)
+        );
+    }
+
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteShareOutDetail(
             @PathVariable Long id
     ) {

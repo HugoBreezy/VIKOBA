@@ -55,7 +55,9 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public authentication endpoints
+                        // =========================
+                        // PUBLIC AUTH ENDPOINTS
+                        // =========================
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/users/register",
@@ -64,12 +66,47 @@ public class SecurityConfig {
                                 "/api/auth/login"
                         ).permitAll()
 
-                        // User management - ADMIN only
+
+                        // =========================
+                        // USERS
+                        // =========================
                         .requestMatchers(
                                 "/api/users/**"
                         ).hasRole("ADMIN")
 
-                        // All other API endpoints require login
+
+                        // =========================
+                        // SHARE-OUT DETAILS
+                        // =========================
+
+                        // ADMIN can create
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/share-out-details"
+                        ).hasRole("ADMIN")
+
+                        // ADMIN can update
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/share-out-details/**"
+                        ).hasRole("ADMIN")
+
+                        // ADMIN can delete
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/share-out-details/**"
+                        ).hasRole("ADMIN")
+
+                        // USER and ADMIN can view
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/share-out-details/**"
+                        ).hasAnyRole("USER", "ADMIN")
+
+
+                        // =========================
+                        // EVERYTHING ELSE
+                        // =========================
                         .anyRequest().authenticated()
                 )
 

@@ -1,10 +1,13 @@
 package com.example.vikoba.service;
 
+import com.example.vikoba.entity.Loan;
 import com.example.vikoba.entity.ShareOut;
 import com.example.vikoba.repository.ContributionRepository;
 import com.example.vikoba.repository.ExpenseRepository;
+import com.example.vikoba.repository.LoanRepository;
 import com.example.vikoba.repository.ShareOutRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -18,32 +21,37 @@ public class ShareOutService {
     private final ShareOutRepository shareOutRepository;
     private final ContributionRepository contributionRepository;
     private final ExpenseRepository expenseRepository;
+    private final LoanRepository loanRepository;
 
     public ShareOutService(
             ShareOutRepository shareOutRepository,
             ContributionRepository contributionRepository,
-            ExpenseRepository expenseRepository
+            ExpenseRepository expenseRepository,
+            LoanRepository loanRepository
     ) {
         this.shareOutRepository = shareOutRepository;
         this.contributionRepository = contributionRepository;
         this.expenseRepository = expenseRepository;
+        this.loanRepository = loanRepository;
     }
 
     /*
-     * Create a share-out summary for a financial cycle.
+     * Create share-out summary for a financial cycle.
      *
-     * Total Contributions = all member contributions
-     * in the financial cycle.
+     * Calculations are performed automatically from
+     * database records.
      *
-     * Total Expenses = all expenses in the cycle.
+     * Total Contributions = SUM(member contributions)
      *
-     * Total Profit must represent the net profit
-     * available for distribution.
+     * Total Loan Interest = SUM(loan interest)
      *
-     * Note:
-     * Loan interest is group income and will be included
-     * when the income calculation is implemented.
+     * Total Expenses = SUM(cycle expenses)
+     *
+     * Net Profit = Total Loan Interest - Total Expenses
+     *
+     * Total Share-Out = Total Contributions + Net Profit
      */
+    @Transactional
     public ShareOut saveShareOut(ShareOut shareOut) {
 
         validateShareOut(shareOut);
@@ -51,18 +59,18 @@ public class ShareOutService {
         Long cycleId = shareOut.getCycle().getId();
 
         /*
-         * A financial cycle can have only one share-out.
+         * One financial cycle can have only one share-out.
          */
         if (shareOutRepository.existsByCycleId(cycleId)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Share-out already exists for financial cycle: "
                             + cycleId
             );
         }
 
         /*
-         * Calculate total contributions from the database.
+         * Calculate total contributions from database.
          */
         BigDecimal totalContributions =
                 contributionRepository
@@ -81,7 +89,29 @@ public class ShareOutService {
                         );
 
         /*
-         * Calculate total expenses from the database.
+         * Calculate total loan interest from all
+         * loans belonging to this financial cycle.
+         *
+         * Loan principal is NOT income.
+         * Only interest is treated as group income.
+         */
+        BigDecimal totalLoanInterest =
+                loanRepository
+                        .findByCycleId(cycleId)
+                        .stream()
+                        .map(Loan::getInterestAmount)
+                        .filter(interest -> interest != null)
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add
+                        )
+                        .setScale(
+                                2,
+                                RoundingMode.HALF_UP
+                        );
+
+        /*
+         * Calculate total expenses from database.
          */
         BigDecimal totalExpenses =
                 expenseRepository
@@ -100,31 +130,32 @@ public class ShareOutService {
                         );
 
         /*
-         * At this stage, totalProfit is expected to be
-         * supplied by the income calculation logic.
-         *
-         * We do not invent an income amount here.
-         *
-         * The final net profit calculation will be:
-         *
-         * Net Profit = Total Income - Total Expenses
+         * Net Profit =
+         * Total Loan Interest - Total Expenses
          */
         BigDecimal totalProfit =
-                shareOut.getTotalProfit();
+                totalLoanInterest
+                        .subtract(totalExpenses)
+                        .setScale(
+                                2,
+                                RoundingMode.HALF_UP
+                        );
 
-        if (totalProfit == null) {
+        /*
+         * If expenses are greater than income,
+         * the cycle has a loss.
+         *
+         * We do not allow negative profit to reduce
+         * members' original contributions.
+         */
+        if (totalProfit.compareTo(BigDecimal.ZERO) < 0) {
+
             totalProfit = BigDecimal.ZERO;
         }
 
-        totalProfit =
-                totalProfit.setScale(
-                        2,
-                        RoundingMode.HALF_UP
-                );
-
         /*
-         * Share-out amount =
-         * contributions + net profit.
+         * Total Share-Out =
+         * Contributions + Net Profit
          */
         BigDecimal totalShareOut =
                 totalContributions
@@ -134,16 +165,22 @@ public class ShareOutService {
                                 RoundingMode.HALF_UP
                         );
 
+        /*
+         * Set calculated values.
+         *
+         * Values supplied by the client for these
+         * calculated fields are ignored.
+         */
         shareOut.setTotalContributions(
                 totalContributions
         );
 
-        shareOut.setTotalExpenses(
-                totalExpenses
-        );
-
         shareOut.setTotalProfit(
                 totalProfit
+        );
+
+        shareOut.setTotalExpenses(
+                totalExpenses
         );
 
         shareOut.setTotalShareOut(
@@ -151,10 +188,13 @@ public class ShareOutService {
         );
 
         /*
-         * Automatically use today's date if not provided.
+         * Automatically set today's date if omitted.
          */
         if (shareOut.getShareOutDate() == null) {
-            shareOut.setShareOutDate(LocalDate.now());
+
+            shareOut.setShareOutDate(
+                    LocalDate.now()
+            );
         }
 
         /*
@@ -170,41 +210,61 @@ public class ShareOutService {
     }
 
     public List<ShareOut> getAllShareOuts() {
+
         return shareOutRepository.findAll();
     }
 
-    public Optional<ShareOut> getShareOutById(Long id) {
+    public Optional<ShareOut> getShareOutById(
+            Long id
+    ) {
+
         return shareOutRepository.findById(id);
     }
 
-    public Optional<ShareOut> getShareOutByCycle(Long cycleId) {
+    public Optional<ShareOut> getShareOutByCycle(
+            Long cycleId
+    ) {
 
         if (cycleId == null) {
-            throw new RuntimeException(
+
+            throw new IllegalArgumentException(
                     "Financial cycle ID is required"
             );
         }
 
-        return shareOutRepository.findByCycleId(cycleId);
+        return shareOutRepository.findByCycleId(
+                cycleId
+        );
     }
 
     public Optional<ShareOut> getShareOutByCycleAndStatus(
             Long cycleId,
             String status
     ) {
-        return shareOutRepository.findByCycleIdAndStatus(
-                cycleId,
-                status
-        );
+
+        return shareOutRepository
+                .findByCycleIdAndStatus(
+                        cycleId,
+                        status
+                );
     }
 
-    public boolean shareOutExists(Long cycleId) {
-        return shareOutRepository.existsByCycleId(cycleId);
+    public boolean shareOutExists(
+            Long cycleId
+    ) {
+
+        return shareOutRepository.existsByCycleId(
+                cycleId
+        );
     }
 
     /*
      * Update an existing share-out.
+     *
+     * Calculated financial values are recalculated
+     * from the database instead of trusting request values.
      */
+    @Transactional
     public ShareOut updateShareOut(
             Long id,
             ShareOut updatedShareOut
@@ -213,7 +273,7 @@ public class ShareOutService {
         ShareOut existingShareOut =
                 shareOutRepository.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new IllegalArgumentException(
                                         "Share-out not found with id: "
                                                 + id
                                 )
@@ -221,49 +281,164 @@ public class ShareOutService {
 
         validateShareOut(updatedShareOut);
 
+        Long cycleId =
+                existingShareOut
+                        .getCycle()
+                        .getId();
+
+        /*
+         * Keep the original cycle.
+         *
+         * A share-out belongs to the cycle under
+         * which it was created.
+         */
         existingShareOut.setCycle(
-                updatedShareOut.getCycle()
+                existingShareOut.getCycle()
         );
 
+        /*
+         * Recalculate total contributions.
+         */
+        BigDecimal totalContributions =
+                contributionRepository
+                        .findByCycleId(cycleId)
+                        .stream()
+                        .map(contribution ->
+                                contribution.getAmount()
+                        )
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add
+                        )
+                        .setScale(
+                                2,
+                                RoundingMode.HALF_UP
+                        );
+
+        /*
+         * Recalculate total loan interest.
+         */
+        BigDecimal totalLoanInterest =
+                loanRepository
+                        .findByCycleId(cycleId)
+                        .stream()
+                        .map(Loan::getInterestAmount)
+                        .filter(interest -> interest != null)
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add
+                        )
+                        .setScale(
+                                2,
+                                RoundingMode.HALF_UP
+                        );
+
+        /*
+         * Recalculate total expenses.
+         */
+        BigDecimal totalExpenses =
+                expenseRepository
+                        .findByCycleId(cycleId)
+                        .stream()
+                        .map(expense ->
+                                expense.getAmount()
+                        )
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add
+                        )
+                        .setScale(
+                                2,
+                                RoundingMode.HALF_UP
+                        );
+
+        /*
+         * Recalculate net profit.
+         */
+        BigDecimal totalProfit =
+                totalLoanInterest
+                        .subtract(totalExpenses)
+                        .setScale(
+                                2,
+                                RoundingMode.HALF_UP
+                        );
+
+        if (totalProfit.compareTo(BigDecimal.ZERO) < 0) {
+
+            totalProfit = BigDecimal.ZERO;
+        }
+
+        /*
+         * Recalculate total share-out.
+         */
+        BigDecimal totalShareOut =
+                totalContributions
+                        .add(totalProfit)
+                        .setScale(
+                                2,
+                                RoundingMode.HALF_UP
+                        );
+
         existingShareOut.setTotalContributions(
-                updatedShareOut.getTotalContributions()
+                totalContributions
         );
 
         existingShareOut.setTotalProfit(
-                updatedShareOut.getTotalProfit()
+                totalProfit
         );
 
         existingShareOut.setTotalExpenses(
-                updatedShareOut.getTotalExpenses()
+                totalExpenses
         );
 
         existingShareOut.setTotalShareOut(
-                updatedShareOut.getTotalShareOut()
+                totalShareOut
         );
 
-        existingShareOut.setShareOutDate(
-                updatedShareOut.getShareOutDate()
-        );
+        /*
+         * Update date only when supplied.
+         */
+        if (updatedShareOut.getShareOutDate() != null) {
 
-        existingShareOut.setStatus(
-                updatedShareOut.getStatus()
-        );
+            existingShareOut.setShareOutDate(
+                    updatedShareOut.getShareOutDate()
+            );
+        }
 
+        /*
+         * Update status if supplied.
+         */
+        if (updatedShareOut.getStatus() != null &&
+                !updatedShareOut.getStatus().isBlank()) {
+
+            existingShareOut.setStatus(
+                    updatedShareOut.getStatus()
+                            .toUpperCase()
+            );
+        }
+
+        /*
+         * Update notes.
+         */
         existingShareOut.setNotes(
                 updatedShareOut.getNotes()
         );
 
-        return shareOutRepository.save(existingShareOut);
+        return shareOutRepository.save(
+                existingShareOut
+        );
     }
 
     /*
      * Delete a share-out.
      */
-    public void deleteShareOut(Long id) {
+    public void deleteShareOut(
+            Long id
+    ) {
 
         if (!shareOutRepository.existsById(id)) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Share-out not found with id: " + id
             );
         }
@@ -280,7 +455,7 @@ public class ShareOutService {
 
         if (shareOut == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Share-out data cannot be null"
             );
         }
@@ -291,49 +466,45 @@ public class ShareOutService {
         if (shareOut.getCycle() == null ||
                 shareOut.getCycle().getId() == null) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Financial cycle is required"
             );
         }
 
         /*
-         * If values are supplied manually,
-         * they cannot be negative.
+         * Calculated financial fields are NOT trusted
+         * from the client.
+         *
+         * Therefore we intentionally do not validate:
+         *
+         * totalContributions
+         * totalProfit
+         * totalExpenses
+         * totalShareOut
+         *
+         * They are recalculated from database records.
          */
-        if (shareOut.getTotalContributions() != null &&
-                shareOut.getTotalContributions()
-                        .compareTo(BigDecimal.ZERO) < 0) {
 
-            throw new RuntimeException(
-                    "Total contributions cannot be negative"
-            );
-        }
+        /*
+         * Validate status if supplied.
+         */
+        if (shareOut.getStatus() != null &&
+                !shareOut.getStatus().isBlank()) {
 
-        if (shareOut.getTotalProfit() != null &&
-                shareOut.getTotalProfit()
-                        .compareTo(BigDecimal.ZERO) < 0) {
+            String status =
+                    shareOut.getStatus()
+                            .toUpperCase();
 
-            throw new RuntimeException(
-                    "Total profit cannot be negative"
-            );
-        }
+            if (!status.equals("PENDING") &&
+                    !status.equals("COMPLETED")) {
 
-        if (shareOut.getTotalExpenses() != null &&
-                shareOut.getTotalExpenses()
-                        .compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException(
+                        "Invalid share-out status. "
+                                + "Allowed values: PENDING, COMPLETED"
+                );
+            }
 
-            throw new RuntimeException(
-                    "Total expenses cannot be negative"
-            );
-        }
-
-        if (shareOut.getTotalShareOut() != null &&
-                shareOut.getTotalShareOut()
-                        .compareTo(BigDecimal.ZERO) < 0) {
-
-            throw new RuntimeException(
-                    "Total share-out cannot be negative"
-            );
+            shareOut.setStatus(status);
         }
     }
 }
