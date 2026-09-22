@@ -768,3 +768,91 @@ export const getFinancialCycles = async () => {
 
   return data
 }
+
+// =====================================================
+// LOAN WRITE OPERATIONS
+// =====================================================
+
+export const createLoan = async (loan) => {
+  const token = localStorage.getItem('vikoba_token')
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/loans`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(loan),
+    }
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.message ||
+        'Failed to create loan.'
+    )
+  }
+
+  return data
+}
+
+export const updateLoan = async (id, loan) => {
+  const token = localStorage.getItem('vikoba_token')
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/loans/${id}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(loan),
+    }
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.message ||
+        'Failed to update loan.'
+    )
+  }
+
+  return data
+}
+
+export const deleteLoan = async (id) => {
+  const token = localStorage.getItem('vikoba_token')
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/loans/${id}`,
+    {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  )
+
+  if (!response.ok) {
+    let message = 'Failed to delete loan.'
+
+    try {
+      const data = await response.json()
+      message = data.message || message
+    } catch {
+      // No JSON response
+    }
+
+    throw new Error(message)
+  }
+
+  return true
+}

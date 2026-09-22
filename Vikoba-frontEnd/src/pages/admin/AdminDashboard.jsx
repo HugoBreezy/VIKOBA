@@ -434,7 +434,7 @@ function AdminDashboard() {
             <span>Contributions</span>
           </a>
 
-          <a href="#" className="sidebar-link">
+          <a href="/loans" className="sidebar-link">
             <FaHandHoldingUsd />
             <span>Loans</span>
           </a>

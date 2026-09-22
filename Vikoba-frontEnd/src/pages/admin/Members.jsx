@@ -404,56 +404,29 @@ function Members() {
     try {
       setSaving(true)
 
-      // -----------------------------------------------
-      // SHOW LOADING ALERT
-      // -----------------------------------------------
-
       Swal.fire({
         title: editingMember
           ? 'Updating Member...'
           : 'Adding Member...',
-
         text: 'Please wait',
-
         allowOutsideClick: false,
-
         allowEscapeKey: false,
-
         showConfirmButton: false,
-
         didOpen: () => {
           Swal.showLoading()
         },
       })
-
-      // -----------------------------------------------
-      // UPDATE
-      // -----------------------------------------------
 
       if (editingMember) {
         await updateMember(
           editingMember.id,
           form
         )
-      }
-
-      // -----------------------------------------------
-      // CREATE
-      // -----------------------------------------------
-
-      else {
+      } else {
         await createMember(form)
       }
 
-      // -----------------------------------------------
-      // CLOSE LOADING ALERT
-      // -----------------------------------------------
-
       Swal.close()
-
-      // -----------------------------------------------
-      // SUCCESS ALERT
-      // -----------------------------------------------
 
       await Swal.fire({
         icon: 'success',
@@ -472,19 +445,11 @@ function Members() {
           '#1450c8',
       })
 
-      // -----------------------------------------------
-      // CLOSE MODAL
-      // -----------------------------------------------
-
       setShowModal(false)
 
       setEditingMember(null)
 
       resetForm()
-
-      // -----------------------------------------------
-      // RELOAD MEMBERS
-      // -----------------------------------------------
 
       await loadMembers()
 
@@ -494,10 +459,8 @@ function Members() {
         error
       )
 
-      // Close loading alert
       Swal.close()
 
-      // Show error
       Swal.fire({
         icon: 'error',
 
@@ -944,12 +907,13 @@ function Members() {
             </span>
           </a>
 
+          {/* =================================================
+              LOANS - NAVIGATE TO LOANS PAGE
+          ================================================= */}
+
           <a
-            href="#"
+            href="/loans"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaHandHoldingUsd />
 

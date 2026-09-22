@@ -42,47 +42,22 @@ function Contributions() {
 
   const profileRef = useRef(null)
 
-  const [profileOpen, setProfileOpen] =
-    useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [contributions, setContributions] = useState([])
+  const [members, setMembers] = useState([])
+  const [meetings, setMeetings] = useState([])
+  const [cycles, setCycles] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  const [contributions, setContributions] =
-    useState([])
+  const [search, setSearch] = useState('')
+  const [cycleFilter, setCycleFilter] = useState('ALL')
+  const [memberFilter, setMemberFilter] = useState('ALL')
+  const [sortBy, setSortBy] = useState('NEWEST')
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const [members, setMembers] =
-    useState([])
-
-  const [meetings, setMeetings] =
-    useState([])
-
-  const [cycles, setCycles] =
-    useState([])
-
-  const [loading, setLoading] =
-    useState(true)
-
-  const [saving, setSaving] =
-    useState(false)
-
-  const [search, setSearch] =
-    useState('')
-
-  const [cycleFilter, setCycleFilter] =
-    useState('ALL')
-
-  const [memberFilter, setMemberFilter] =
-    useState('ALL')
-
-  const [sortBy, setSortBy] =
-    useState('NEWEST')
-
-  const [currentPage, setCurrentPage] =
-    useState(1)
-
-  const [showModal, setShowModal] =
-    useState(false)
-
-  const [editingContribution, setEditingContribution] =
-    useState(null)
+  const [showModal, setShowModal] = useState(false)
+  const [editingContribution, setEditingContribution] = useState(null)
 
   const [form, setForm] = useState({
     memberId: '',
@@ -170,9 +145,7 @@ function Contributions() {
     const handleOutsideClick = (event) => {
       if (
         profileRef.current &&
-        !profileRef.current.contains(
-          event.target
-        )
+        !profileRef.current.contains(event.target)
       ) {
         setProfileOpen(false)
       }
@@ -228,9 +201,7 @@ function Contributions() {
 
   const openAddModal = () => {
     setEditingContribution(null)
-
     resetForm()
-
     setShowModal(true)
   }
 
@@ -238,26 +209,18 @@ function Contributions() {
   // OPEN EDIT MODAL
   // =====================================================
 
-  const openEditModal = (
-    contribution
-  ) => {
-    setEditingContribution(
-      contribution
-    )
+  const openEditModal = (contribution) => {
+    setEditingContribution(contribution)
 
     setForm({
       memberId:
-        contribution.member?.id?.toString() ||
-        '',
+        contribution.member?.id?.toString() || '',
       cycleId:
-        contribution.cycle?.id?.toString() ||
-        '',
+        contribution.cycle?.id?.toString() || '',
       meetingId:
-        contribution.meeting?.id?.toString() ||
-        '',
+        contribution.meeting?.id?.toString() || '',
       amount:
-        contribution.amount?.toString() ||
-        '',
+        contribution.amount?.toString() || '',
       contributionDate:
         contribution.contributionDate ||
         new Date()
@@ -278,9 +241,7 @@ function Contributions() {
     }
 
     setShowModal(false)
-
     setEditingContribution(null)
-
     resetForm()
   }
 
@@ -288,9 +249,7 @@ function Contributions() {
   // INPUT CHANGE
   // =====================================================
 
-  const handleInputChange = (
-    event
-  ) => {
+  const handleInputChange = (event) => {
     const {
       name,
       value,
@@ -306,9 +265,7 @@ function Contributions() {
   // SAVE CONTRIBUTION
   // =====================================================
 
-  const handleSubmit = async (
-    event
-  ) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     if (!form.memberId) {
@@ -345,9 +302,7 @@ function Contributions() {
       return
     }
 
-    const amount = Number(
-      form.amount
-    )
+    const amount = Number(form.amount)
 
     if (
       !form.amount ||
@@ -377,10 +332,9 @@ function Contributions() {
       return
     }
 
-    const selectedDate =
-      new Date(
-        `${form.contributionDate}T00:00:00`
-      )
+    const selectedDate = new Date(
+      `${form.contributionDate}T00:00:00`
+    )
 
     const today = new Date()
 
@@ -421,21 +375,15 @@ function Contributions() {
 
       const contributionData = {
         member: {
-          id: Number(
-            form.memberId
-          ),
+          id: Number(form.memberId),
         },
 
         cycle: {
-          id: Number(
-            form.cycleId
-          ),
+          id: Number(form.cycleId),
         },
 
         meeting: {
-          id: Number(
-            form.meetingId
-          ),
+          id: Number(form.meetingId),
         },
 
         amount,
@@ -466,14 +414,11 @@ function Contributions() {
           ? 'The contribution has been updated successfully.'
           : 'The contribution has been recorded successfully.',
         confirmButtonText: 'OK',
-        confirmButtonColor:
-          '#1450c8',
+        confirmButtonColor: '#1450c8',
       })
 
       setShowModal(false)
-
       setEditingContribution(null)
-
       resetForm()
 
       await loadData()
@@ -505,31 +450,28 @@ function Contributions() {
   // DELETE CONTRIBUTION
   // =====================================================
 
-  const handleDelete = async (
-    contribution
-  ) => {
+  const handleDelete = async (contribution) => {
     const memberName =
       contribution.member?.fullName ||
       `Member #${
-        contribution.member?.id ||
-        ''
+        contribution.member?.id || ''
       }`
 
-    const result =
-      await Swal.fire({
-        icon: 'warning',
-        title: 'Delete Contribution?',
-        text: `Are you sure you want to delete this contribution for ${memberName}?`,
-        showCancelButton: true,
-        confirmButtonText:
-          'Yes, Delete',
-        cancelButtonText:
-          'Cancel',
-        confirmButtonColor:
-          '#dc3545',
-        cancelButtonColor:
-          '#6c757d',
-      })
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Delete Contribution?',
+      text:
+        `Are you sure you want to delete this contribution for ${memberName}?`,
+      showCancelButton: true,
+      confirmButtonText:
+        'Yes, Delete',
+      cancelButtonText:
+        'Cancel',
+      confirmButtonColor:
+        '#dc3545',
+      cancelButtonColor:
+        '#6c757d',
+    })
 
     if (!result.isConfirmed) {
       return
@@ -567,9 +509,7 @@ function Contributions() {
   // VIEW CONTRIBUTION
   // =====================================================
 
-  const handleView = (
-    contribution
-  ) => {
+  const handleView = (contribution) => {
     const memberName =
       contribution.member?.fullName ||
       '-'
@@ -582,24 +522,20 @@ function Contributions() {
       contribution.cycle?.name ||
       contribution.cycle?.cycleName ||
       `Cycle #${
-        contribution.cycle?.id ||
-        '-'
+        contribution.cycle?.id || '-'
       }`
 
     const meetingNumber =
-      contribution.meeting
-        ?.meetingNumber ||
+      contribution.meeting?.meetingNumber ||
       '-'
 
     const meetingDate =
-      contribution.meeting
-        ?.meetingDate ||
+      contribution.meeting?.meetingDate ||
       '-'
 
-    const amount =
-      Number(
-        contribution.amount || 0
-      ).toLocaleString()
+    const amount = Number(
+      contribution.amount || 0
+    ).toLocaleString()
 
     Swal.fire({
       title:
@@ -653,7 +589,6 @@ function Contributions() {
 
   const filteredContributions =
     contributions
-
       .filter((contribution) => {
         const query =
           search
@@ -665,30 +600,24 @@ function Contributions() {
         }
 
         const memberName =
-          contribution.member
-            ?.fullName ||
+          contribution.member?.fullName ||
           ''
 
         const memberNumber =
-          contribution.member
-            ?.memberNumber ||
+          contribution.member?.memberNumber ||
           ''
 
-        const amount =
-          String(
-            contribution.amount ||
-              ''
-          )
+        const amount = String(
+          contribution.amount || ''
+        )
 
         const date =
           contribution.contributionDate ||
           ''
 
         const cycleName =
-          contribution.cycle
-            ?.name ||
-          contribution.cycle
-            ?.cycleName ||
+          contribution.cycle?.name ||
+          contribution.cycle?.cycleName ||
           ''
 
         return (
@@ -711,92 +640,63 @@ function Contributions() {
       })
 
       .filter((contribution) => {
-        if (
-          cycleFilter ===
-          'ALL'
-        ) {
+        if (cycleFilter === 'ALL') {
           return true
         }
 
         return (
           String(
-            contribution.cycle?.id ||
-              ''
+            contribution.cycle?.id || ''
           ) ===
           String(cycleFilter)
         )
       })
 
       .filter((contribution) => {
-        if (
-          memberFilter ===
-          'ALL'
-        ) {
+        if (memberFilter === 'ALL') {
           return true
         }
 
         return (
           String(
-            contribution.member?.id ||
-              ''
+            contribution.member?.id || ''
           ) ===
           String(memberFilter)
         )
       })
 
       .sort((a, b) => {
-        if (
-          sortBy ===
-          'AMOUNT_HIGH'
-        ) {
+        if (sortBy === 'AMOUNT_HIGH') {
           return (
-            Number(
-              b.amount || 0
-            ) -
-            Number(
-              a.amount || 0
-            )
+            Number(b.amount || 0) -
+            Number(a.amount || 0)
           )
         }
 
-        if (
-          sortBy ===
-          'AMOUNT_LOW'
-        ) {
+        if (sortBy === 'AMOUNT_LOW') {
           return (
-            Number(
-              a.amount || 0
-            ) -
-            Number(
-              b.amount || 0
-            )
+            Number(a.amount || 0) -
+            Number(b.amount || 0)
           )
         }
 
-        if (
-          sortBy ===
-          'OLDEST'
-        ) {
+        if (sortBy === 'OLDEST') {
           return (
             new Date(
-              a.contributionDate ||
-                0
+              a.contributionDate || 0
             ) -
             new Date(
-              b.contributionDate ||
-                0
+              b.contributionDate || 0
             )
           )
         }
 
         return (
           new Date(
-            b.contributionDate ||
-              0
+            b.contributionDate || 0
           ) -
           new Date(
-            a.contributionDate ||
-              0
+            a.contributionDate || 0
           )
         )
       })
@@ -805,11 +705,10 @@ function Contributions() {
   // PAGINATION
   // =====================================================
 
-  const totalPages =
-    Math.ceil(
-      filteredContributions.length /
-        contributionsPerPage
-    )
+  const totalPages = Math.ceil(
+    filteredContributions.length /
+      contributionsPerPage
+  )
 
   const startIndex =
     (currentPage - 1) *
@@ -837,28 +736,20 @@ function Contributions() {
 
   const totalAmount =
     contributions.reduce(
-      (
-        total,
-        contribution
-      ) =>
+      (total, contribution) =>
         total +
         Number(
-          contribution.amount ||
-            0
+          contribution.amount || 0
         ),
       0
     )
 
   const filteredAmount =
     filteredContributions.reduce(
-      (
-        total,
-        contribution
-      ) =>
+      (total, contribution) =>
         total +
         Number(
-          contribution.amount ||
-            0
+          contribution.amount || 0
         ),
       0
     )
@@ -868,18 +759,13 @@ function Contributions() {
   // =====================================================
 
   const handleExport = () => {
-    if (
-      contributions.length ===
-      0
-    ) {
+    if (contributions.length === 0) {
       Swal.fire({
         icon: 'info',
-        title:
-          'No Contributions',
+        title: 'No Contributions',
         text:
           'There are no contributions to export.',
-        confirmButtonText:
-          'OK',
+        confirmButtonText: 'OK',
       })
 
       return
@@ -898,38 +784,28 @@ function Contributions() {
 
     const rows =
       contributions.map(
-        (
-          contribution
-        ) => [
-          contribution.id ||
-            '',
+        (contribution) => [
+          contribution.id || '',
 
           contribution.member
-            ?.memberNumber ||
-            '',
+            ?.memberNumber || '',
 
           contribution.member
-            ?.fullName ||
-            '',
+            ?.fullName || '',
 
-          contribution.cycle
-            ?.name ||
+          contribution.cycle?.name ||
             contribution.cycle
               ?.cycleName ||
-            contribution.cycle
-              ?.id ||
+            contribution.cycle?.id ||
             '',
 
           contribution.meeting
-            ?.meetingNumber ||
-            '',
+            ?.meetingNumber || '',
 
           contribution.meeting
-            ?.meetingDate ||
-            '',
+            ?.meetingDate || '',
 
-          contribution.amount ||
-            '',
+          contribution.amount || '',
 
           contribution.contributionDate ||
             '',
@@ -937,10 +813,7 @@ function Contributions() {
       )
 
     const csvContent =
-      [
-        headers,
-        ...rows,
-      ]
+      [headers, ...rows]
         .map((row) =>
           row
             .map(
@@ -956,43 +829,32 @@ function Contributions() {
         )
         .join('\n')
 
-    const blob =
-      new Blob(
-        [csvContent],
-        {
-          type:
-            'text/csv;charset=utf-8;',
-        }
-      )
+    const blob = new Blob(
+      [csvContent],
+      {
+        type:
+          'text/csv;charset=utf-8;',
+      }
+    )
 
     const url =
-      URL.createObjectURL(
-        blob
-      )
+      URL.createObjectURL(blob)
 
     const link =
-      document.createElement(
-        'a'
-      )
+      document.createElement('a')
 
     link.href = url
 
     link.download =
       'vikoba-contributions.csv'
 
-    document.body.appendChild(
-      link
-    )
+    document.body.appendChild(link)
 
     link.click()
 
-    document.body.removeChild(
-      link
-    )
+    document.body.removeChild(link)
 
-    URL.revokeObjectURL(
-      url
-    )
+    URL.revokeObjectURL(url)
   }
 
   // =====================================================
@@ -1076,12 +938,11 @@ function Contributions() {
             </span>
           </a>
 
+          {/* FIXED: LOANS NAVIGATION */}
+
           <a
-            href="#"
+            href="/loans"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaHandHoldingUsd />
 
@@ -1450,9 +1311,7 @@ function Contributions() {
                   <input
                     type="text"
                     value={search}
-                    onChange={(
-                      event
-                    ) =>
+                    onChange={(event) =>
                       setSearch(
                         event.target.value
                       )
@@ -1476,12 +1335,8 @@ function Contributions() {
                 <div className="members-toolbar-actions">
 
                   <select
-                    value={
-                      cycleFilter
-                    }
-                    onChange={(
-                      event
-                    ) =>
+                    value={cycleFilter}
+                    onChange={(event) =>
                       setCycleFilter(
                         event.target.value
                       )
@@ -1495,12 +1350,8 @@ function Contributions() {
                     {cycles.map(
                       (cycle) => (
                         <option
-                          key={
-                            cycle.id
-                          }
-                          value={
-                            cycle.id
-                          }
+                          key={cycle.id}
+                          value={cycle.id}
                         >
                           {
                             cycle.name ||
@@ -1514,12 +1365,8 @@ function Contributions() {
                   </select>
 
                   <select
-                    value={
-                      memberFilter
-                    }
-                    onChange={(
-                      event
-                    ) =>
+                    value={memberFilter}
+                    onChange={(event) =>
                       setMemberFilter(
                         event.target.value
                       )
@@ -1533,12 +1380,8 @@ function Contributions() {
                     {members.map(
                       (member) => (
                         <option
-                          key={
-                            member.id
-                          }
-                          value={
-                            member.id
-                          }
+                          key={member.id}
+                          value={member.id}
                         >
                           {
                             member.fullName
@@ -1551,9 +1394,7 @@ function Contributions() {
 
                   <select
                     value={sortBy}
-                    onChange={(
-                      event
-                    ) =>
+                    onChange={(event) =>
                       setSortBy(
                         event.target.value
                       )
@@ -1608,8 +1449,7 @@ function Contributions() {
 
                   </div>
 
-                ) : paginatedContributions.length ===
-                  0 ? (
+                ) : paginatedContributions.length === 0 ? (
 
                   <div className="members-empty">
 
@@ -1675,9 +1515,7 @@ function Contributions() {
                     <tbody>
 
                       {paginatedContributions.map(
-                        (
-                          contribution
-                        ) => {
+                        (contribution) => {
 
                           const member =
                             contribution.member
@@ -1702,9 +1540,7 @@ function Contributions() {
                                   <div className="member-avatar">
 
                                     {member?.fullName
-                                      ?.charAt(
-                                        0
-                                      )
+                                      ?.charAt(0)
                                       .toUpperCase() ||
                                       'M'}
 
@@ -1847,8 +1683,7 @@ function Contributions() {
               </div>
 
               {!loading &&
-                filteredContributions.length >
-                  0 && (
+                filteredContributions.length > 0 && (
 
                 <div className="members-pagination">
 
@@ -1857,8 +1692,7 @@ function Contributions() {
                     Showing{' '}
 
                     {
-                      startIndex +
-                      1
+                      startIndex + 1
                     }
 
                     -
@@ -1882,8 +1716,7 @@ function Contributions() {
                     <button
                       type="button"
                       disabled={
-                        currentPage ===
-                        1
+                        currentPage === 1
                       }
                       onClick={() =>
                         setCurrentPage(
@@ -1903,22 +1736,16 @@ function Contributions() {
                         length:
                           totalPages,
                       },
-                      (
-                        _,
-                        index
-                      ) =>
+                      (_, index) =>
                         index + 1
                     ).map(
                       (page) => (
 
                         <button
                           type="button"
-                          key={
-                            page
-                          }
+                          key={page}
                           className={
-                            currentPage ===
-                            page
+                            currentPage === page
                               ? 'active'
                               : ''
                           }
@@ -1982,9 +1809,7 @@ function Contributions() {
 
           <div
             className="members-modal"
-            onMouseDown={(
-              event
-            ) =>
+            onMouseDown={(event) =>
               event.stopPropagation()
             }
           >
@@ -2057,12 +1882,8 @@ function Contributions() {
                     {members.map(
                       (member) => (
                         <option
-                          key={
-                            member.id
-                          }
-                          value={
-                            member.id
-                          }
+                          key={member.id}
+                          value={member.id}
                         >
                           {
                             member.memberNumber
@@ -2101,12 +1922,8 @@ function Contributions() {
                     {cycles.map(
                       (cycle) => (
                         <option
-                          key={
-                            cycle.id
-                          }
-                          value={
-                            cycle.id
-                          }
+                          key={cycle.id}
+                          value={cycle.id}
                         >
                           {
                             cycle.name ||
@@ -2145,12 +1962,8 @@ function Contributions() {
                     {meetings.map(
                       (meeting) => (
                         <option
-                          key={
-                            meeting.id
-                          }
-                          value={
-                            meeting.id
-                          }
+                          key={meeting.id}
+                          value={meeting.id}
                         >
                           {`Meeting #${
                             meeting.meetingNumber ||

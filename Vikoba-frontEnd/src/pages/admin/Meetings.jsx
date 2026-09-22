@@ -96,15 +96,30 @@ function Meetings() {
 
       const cycleData = await cycleResponse.json()
 
-      setMeetings(Array.isArray(meetingData) ? meetingData : [])
-      setCycles(Array.isArray(cycleData) ? cycleData : [])
+      setMeetings(
+        Array.isArray(meetingData)
+          ? meetingData
+          : []
+      )
+
+      setCycles(
+        Array.isArray(cycleData)
+          ? cycleData
+          : []
+      )
+
     } catch (error) {
-      console.error('Failed to load meetings:', error)
+      console.error(
+        'Failed to load meetings:',
+        error
+      )
 
       Swal.fire({
         icon: 'error',
         title: 'Failed to Load Meetings',
-        text: error.message || 'Unable to load meetings.',
+        text:
+          error.message ||
+          'Unable to load meetings.',
         confirmButtonText: 'OK',
       })
     } finally {
@@ -120,16 +135,24 @@ function Meetings() {
     const handleOutsideClick = (event) => {
       if (
         profileRef.current &&
-        !profileRef.current.contains(event.target)
+        !profileRef.current.contains(
+          event.target
+        )
       ) {
         setProfileOpen(false)
       }
     }
 
-    document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener(
+      'mousedown',
+      handleOutsideClick
+    )
 
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener(
+        'mousedown',
+        handleOutsideClick
+      )
     }
   }, [])
 
@@ -138,16 +161,24 @@ function Meetings() {
     localStorage.removeItem('vikoba_username')
     localStorage.removeItem('vikoba_role')
     localStorage.removeItem('vikoba_remember_me')
+
     sessionStorage.clear()
+
     window.location.replace('/')
   }
 
   const getCycleId = (meeting) => {
-    if (meeting.cycleId !== undefined && meeting.cycleId !== null) {
+    if (
+      meeting.cycleId !== undefined &&
+      meeting.cycleId !== null
+    ) {
       return meeting.cycleId
     }
 
-    if (meeting.cycle?.id !== undefined && meeting.cycle?.id !== null) {
+    if (
+      meeting.cycle?.id !== undefined &&
+      meeting.cycle?.id !== null
+    ) {
       return meeting.cycle.id
     }
 
@@ -164,20 +195,31 @@ function Meetings() {
     }
 
     const cycleId = getCycleId(meeting)
+
     const cycle = cycles.find(
-      (item) => String(item.id) === String(cycleId)
+      (item) =>
+        String(item.id) ===
+        String(cycleId)
     )
 
-    return cycle?.name || cycle?.cycleName || `Cycle #${cycleId || '-'}`
+    return (
+      cycle?.name ||
+      cycle?.cycleName ||
+      `Cycle #${cycleId || '-'}`
+    )
   }
 
   const generateNextMeetingNumber = () => {
     let highestNumber = 0
 
     meetings.forEach((meeting) => {
-      const number = Number(meeting.meetingNumber)
+      const number =
+        Number(meeting.meetingNumber)
 
-      if (Number.isFinite(number) && number > highestNumber) {
+      if (
+        Number.isFinite(number) &&
+        number > highestNumber
+      ) {
         highestNumber = number
       }
     })
@@ -188,7 +230,10 @@ function Meetings() {
   const resetForm = () => {
     setForm({
       meetingNumber: '',
-      meetingDate: new Date().toISOString().split('T')[0],
+      meetingDate:
+        new Date()
+          .toISOString()
+          .split('T')[0],
       cycleId: '',
       notes: '',
     })
@@ -198,8 +243,14 @@ function Meetings() {
     setEditingMeeting(null)
 
     setForm({
-      meetingNumber: String(generateNextMeetingNumber()),
-      meetingDate: new Date().toISOString().split('T')[0],
+      meetingNumber:
+        String(
+          generateNextMeetingNumber()
+        ),
+      meetingDate:
+        new Date()
+          .toISOString()
+          .split('T')[0],
       cycleId: '',
       notes: '',
     })
@@ -211,12 +262,24 @@ function Meetings() {
     setEditingMeeting(meeting)
 
     setForm({
-      meetingNumber: String(meeting.meetingNumber || ''),
+      meetingNumber:
+        String(
+          meeting.meetingNumber || ''
+        ),
+
       meetingDate:
         meeting.meetingDate ||
-        new Date().toISOString().split('T')[0],
-      cycleId: String(getCycleId(meeting) || ''),
-      notes: meeting.notes || '',
+        new Date()
+          .toISOString()
+          .split('T')[0],
+
+      cycleId:
+        String(
+          getCycleId(meeting) || ''
+        ),
+
+      notes:
+        meeting.notes || '',
     })
 
     setShowModal(true)
@@ -233,7 +296,10 @@ function Meetings() {
   }
 
   const handleInputChange = (event) => {
-    const { name, value } = event.target
+    const {
+      name,
+      value,
+    } = event.target
 
     setForm((previous) => ({
       ...previous,
@@ -244,23 +310,33 @@ function Meetings() {
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    if (!form.meetingNumber.trim()) {
+    if (
+      !form.meetingNumber.trim()
+    ) {
       Swal.fire({
         icon: 'warning',
         title: 'Meeting Number Required',
-        text: 'Please enter meeting number.',
+        text:
+          'Please enter meeting number.',
         confirmButtonText: 'OK',
       })
+
       return
     }
 
-    if (!/^\d+$/.test(form.meetingNumber.trim())) {
+    if (
+      !/^\d+$/.test(
+        form.meetingNumber.trim()
+      )
+    ) {
       Swal.fire({
         icon: 'warning',
         title: 'Invalid Meeting Number',
-        text: 'Meeting number must contain numbers only.',
+        text:
+          'Meeting number must contain numbers only.',
         confirmButtonText: 'OK',
       })
+
       return
     }
 
@@ -268,9 +344,11 @@ function Meetings() {
       Swal.fire({
         icon: 'warning',
         title: 'Meeting Date Required',
-        text: 'Please select meeting date.',
+        text:
+          'Please select meeting date.',
         confirmButtonText: 'OK',
       })
+
       return
     }
 
@@ -278,9 +356,11 @@ function Meetings() {
       Swal.fire({
         icon: 'warning',
         title: 'Financial Cycle Required',
-        text: 'Please select financial cycle.',
+        text:
+          'Please select financial cycle.',
         confirmButtonText: 'OK',
       })
+
       return
     }
 
@@ -300,39 +380,61 @@ function Meetings() {
         },
       })
 
-      const selectedCycle = cycles.find(
-        (cycle) => String(cycle.id) === String(form.cycleId)
-      )
+      const selectedCycle =
+        cycles.find(
+          (cycle) =>
+            String(cycle.id) ===
+            String(form.cycleId)
+        )
 
       if (!selectedCycle) {
-        throw new Error('Selected financial cycle was not found.')
+        throw new Error(
+          'Selected financial cycle was not found.'
+        )
       }
 
       const meetingData = {
-        meetingNumber: Number(form.meetingNumber),
-        meetingDate: form.meetingDate,
-        cycle: selectedCycle,
-        notes: form.notes.trim(),
+        meetingNumber:
+          Number(form.meetingNumber),
+
+        meetingDate:
+          form.meetingDate,
+
+        cycle:
+          selectedCycle,
+
+        notes:
+          form.notes.trim(),
       }
 
       if (editingMeeting) {
-        await updateMeeting(editingMeeting.id, meetingData)
+        await updateMeeting(
+          editingMeeting.id,
+          meetingData
+        )
       } else {
-        await createMeeting(meetingData)
+        await createMeeting(
+          meetingData
+        )
       }
 
       Swal.close()
 
       await Swal.fire({
         icon: 'success',
+
         title: editingMeeting
           ? 'Meeting Updated Successfully'
           : 'Meeting Added Successfully',
+
         text: editingMeeting
           ? 'Meeting has been updated successfully.'
           : `Meeting #${form.meetingNumber} has been added successfully.`,
+
         confirmButtonText: 'OK',
-        confirmButtonColor: '#1450c8',
+
+        confirmButtonColor:
+          '#1450c8',
       })
 
       setShowModal(false)
@@ -340,56 +442,82 @@ function Meetings() {
       resetForm()
 
       await loadData()
+
     } catch (error) {
-      console.error('Failed to save meeting:', error)
+      console.error(
+        'Failed to save meeting:',
+        error
+      )
 
       Swal.close()
 
       Swal.fire({
         icon: 'error',
         title: 'Operation Failed',
-        text: error.message || 'Unable to save meeting.',
-        confirmButtonText: 'Try Again',
-        confirmButtonColor: '#dc3545',
+        text:
+          error.message ||
+          'Unable to save meeting.',
+        confirmButtonText:
+          'Try Again',
+        confirmButtonColor:
+          '#dc3545',
       })
+
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = async (meeting) => {
-    const result = await Swal.fire({
-      icon: 'warning',
-      title: 'Delete Meeting?',
-      text: `Are you sure you want to delete Meeting #${meeting.meetingNumber}?`,
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Delete',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#dc3545',
-      cancelButtonColor: '#6c757d',
-    })
+  const handleDelete = async (
+    meeting
+  ) => {
+    const result =
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Delete Meeting?',
+        text:
+          `Are you sure you want to delete Meeting #${meeting.meetingNumber}?`,
+        showCancelButton: true,
+        confirmButtonText:
+          'Yes, Delete',
+        cancelButtonText:
+          'Cancel',
+        confirmButtonColor:
+          '#dc3545',
+        cancelButtonColor:
+          '#6c757d',
+      })
 
-    if (!result.isConfirmed) {
+    if (
+      !result.isConfirmed
+    ) {
       return
     }
 
     try {
-      await deleteMeeting(meeting.id)
+      await deleteMeeting(
+        meeting.id
+      )
 
       await Swal.fire({
         icon: 'success',
         title: 'Meeting Deleted',
-        text: 'Meeting has been deleted successfully.',
+        text:
+          'Meeting has been deleted successfully.',
         confirmButtonText: 'OK',
-        confirmButtonColor: '#1450c8',
+        confirmButtonColor:
+          '#1450c8',
       })
 
       await loadData()
+
     } catch (error) {
       Swal.fire({
         icon: 'error',
         title: 'Delete Failed',
-        text: error.message || 'Unable to delete meeting.',
+        text:
+          error.message ||
+          'Unable to delete meeting.',
         confirmButtonText: 'OK',
       })
     }
@@ -397,7 +525,9 @@ function Meetings() {
 
   const handleView = (meeting) => {
     Swal.fire({
-      title: `Meeting #${meeting.meetingNumber || '-'}`,
+      title:
+        `Meeting #${meeting.meetingNumber || '-'}`,
+
       html: `
         <div style="text-align:left; line-height:1.8;">
           <strong>Meeting Number:</strong>
@@ -416,86 +546,144 @@ function Meetings() {
           ${meeting.notes || '-'}
         </div>
       `,
+
       confirmButtonText: 'Close',
-      confirmButtonColor: '#1450c8',
+      confirmButtonColor:
+        '#1450c8',
     })
   }
 
-  const filteredMeetings = meetings
-    .filter((meeting) => {
-      const query = search.toLowerCase().trim()
+  const filteredMeetings =
+    meetings
+      .filter((meeting) => {
+        const query =
+          search
+            .toLowerCase()
+            .trim()
 
-      if (!query) {
-        return true
-      }
+        if (!query) {
+          return true
+        }
 
-      return (
-        String(meeting.meetingNumber || '')
-          .toLowerCase()
-          .includes(query) ||
-        String(meeting.meetingDate || '')
-          .toLowerCase()
-          .includes(query) ||
-        getCycleName(meeting)
-          .toLowerCase()
-          .includes(query) ||
-        String(meeting.notes || '')
-          .toLowerCase()
-          .includes(query)
-      )
-    })
-    .filter((meeting) => {
-      if (cycleFilter === 'ALL') {
-        return true
-      }
-
-      return String(getCycleId(meeting)) === String(cycleFilter)
-    })
-    .sort((a, b) => {
-      if (sortBy === 'NUMBER') {
         return (
-          Number(a.meetingNumber || 0) -
-          Number(b.meetingNumber || 0)
-        )
-      }
+          String(
+            meeting.meetingNumber ||
+              ''
+          )
+            .toLowerCase()
+            .includes(query) ||
 
-      if (sortBy === 'OLDEST') {
+          String(
+            meeting.meetingDate ||
+              ''
+          )
+            .toLowerCase()
+            .includes(query) ||
+
+          getCycleName(meeting)
+            .toLowerCase()
+            .includes(query) ||
+
+          String(
+            meeting.notes || ''
+          )
+            .toLowerCase()
+            .includes(query)
+        )
+      })
+
+      .filter((meeting) => {
+        if (
+          cycleFilter === 'ALL'
+        ) {
+          return true
+        }
+
         return (
-          new Date(a.meetingDate || 0) -
-          new Date(b.meetingDate || 0)
+          String(
+            getCycleId(meeting)
+          ) ===
+          String(cycleFilter)
         )
-      }
+      })
 
-      return (
-        new Date(b.meetingDate || 0) -
-        new Date(a.meetingDate || 0)
+      .sort((a, b) => {
+        if (
+          sortBy === 'NUMBER'
+        ) {
+          return (
+            Number(
+              a.meetingNumber || 0
+            ) -
+            Number(
+              b.meetingNumber || 0
+            )
+          )
+        }
+
+        if (
+          sortBy === 'OLDEST'
+        ) {
+          return (
+            new Date(
+              a.meetingDate || 0
+            ) -
+            new Date(
+              b.meetingDate || 0
+            )
+          )
+        }
+
+        return (
+          new Date(
+            b.meetingDate || 0
+          ) -
+          new Date(
+            a.meetingDate || 0
+          )
+        )
+      })
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        filteredMeetings.length /
+          membersPerPage
       )
-    })
+    )
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredMeetings.length / membersPerPage)
-  )
+  const startIndex =
+    (currentPage - 1) *
+    membersPerPage
 
-  const startIndex = (currentPage - 1) * membersPerPage
-
-  const paginatedMeetings = filteredMeetings.slice(
-    startIndex,
-    startIndex + membersPerPage
-  )
+  const paginatedMeetings =
+    filteredMeetings.slice(
+      startIndex,
+      startIndex +
+        membersPerPage
+    )
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, cycleFilter, sortBy])
+  }, [
+    search,
+    cycleFilter,
+    sortBy,
+  ])
 
   const handleExport = () => {
-    if (filteredMeetings.length === 0) {
+    if (
+      filteredMeetings.length === 0
+    ) {
       Swal.fire({
         icon: 'info',
         title: 'No Meetings',
-        text: 'There are no meetings to export.',
+        text:
+          'There are no meetings to export.',
         confirmButtonText: 'OK',
       })
+
       return
     }
 
@@ -507,38 +695,65 @@ function Meetings() {
       'Notes',
     ]
 
-    const rows = filteredMeetings.map((meeting) => [
-      meeting.id || '',
-      meeting.meetingNumber || '',
-      meeting.meetingDate || '',
-      getCycleName(meeting),
-      meeting.notes || '',
-    ])
-
-    const csvContent = [headers, ...rows]
-      .map((row) =>
-        row
-          .map(
-            (value) =>
-              `"${String(value).replaceAll('"', '""')}"`
-          )
-          .join(',')
+    const rows =
+      filteredMeetings.map(
+        (meeting) => [
+          meeting.id || '',
+          meeting.meetingNumber || '',
+          meeting.meetingDate || '',
+          getCycleName(meeting),
+          meeting.notes || '',
+        ]
       )
-      .join('\n')
 
-    const blob = new Blob([csvContent], {
-      type: 'text/csv;charset=utf-8;',
-    })
+    const csvContent =
+      [headers, ...rows]
+        .map((row) =>
+          row
+            .map(
+              (value) =>
+                `"${String(
+                  value
+                ).replaceAll(
+                  '"',
+                  '""'
+                )}"`
+            )
+            .join(',')
+        )
+        .join('\n')
 
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
+    const blob =
+      new Blob(
+        [csvContent],
+        {
+          type:
+            'text/csv;charset=utf-8;',
+        }
+      )
+
+    const url =
+      URL.createObjectURL(
+        blob
+      )
+
+    const link =
+      document.createElement('a')
 
     link.href = url
-    link.download = 'vikoba-meetings.csv'
 
-    document.body.appendChild(link)
+    link.download =
+      'vikoba-meetings.csv'
+
+    document.body.appendChild(
+      link
+    )
+
     link.click()
-    document.body.removeChild(link)
+
+    document.body.removeChild(
+      link
+    )
 
     URL.revokeObjectURL(url)
   }
@@ -558,7 +773,9 @@ function Meetings() {
 
           <div className="sidebar-brand-text">
             <h2>VIKOBA</h2>
-            <span>Management System</span>
+            <span>
+              Management System
+            </span>
           </div>
 
         </div>
@@ -569,17 +786,26 @@ function Meetings() {
             MAIN MENU
           </div>
 
-          <a href="/" className="sidebar-link">
+          <a
+            href="/"
+            className="sidebar-link"
+          >
             <FaHome />
             <span>Dashboard</span>
           </a>
 
-          <a href="/members" className="sidebar-link">
+          <a
+            href="/members"
+            className="sidebar-link"
+          >
             <FaUsers />
             <span>Members</span>
           </a>
 
-          <a href="/meetings" className="sidebar-link active">
+          <a
+            href="/meetings"
+            className="sidebar-link active"
+          >
             <FaCalendarAlt />
             <span>Meetings</span>
           </a>
@@ -592,10 +818,11 @@ function Meetings() {
             <span>Contributions</span>
           </a>
 
+          {/* LOANS NAVIGATION */}
+
           <a
-            href="#"
+            href="/loans"
             className="sidebar-link"
-            onClick={(event) => event.preventDefault()}
           >
             <FaHandHoldingUsd />
             <span>Loans</span>
@@ -608,7 +835,9 @@ function Meetings() {
           <a
             href="#"
             className="sidebar-link"
-            onClick={(event) => event.preventDefault()}
+            onClick={(event) =>
+              event.preventDefault()
+            }
           >
             <FaFileInvoiceDollar />
             <span>Payments</span>
@@ -617,7 +846,9 @@ function Meetings() {
           <a
             href="#"
             className="sidebar-link"
-            onClick={(event) => event.preventDefault()}
+            onClick={(event) =>
+              event.preventDefault()
+            }
           >
             <FaExclamationTriangle />
             <span>Penalties</span>
@@ -626,7 +857,9 @@ function Meetings() {
           <a
             href="#"
             className="sidebar-link"
-            onClick={(event) => event.preventDefault()}
+            onClick={(event) =>
+              event.preventDefault()
+            }
           >
             <FaMoneyBillWave />
             <span>Expenses</span>
@@ -635,7 +868,9 @@ function Meetings() {
           <a
             href="#"
             className="sidebar-link"
-            onClick={(event) => event.preventDefault()}
+            onClick={(event) =>
+              event.preventDefault()
+            }
           >
             <FaChartPie />
             <span>Share-Out</span>
@@ -648,7 +883,9 @@ function Meetings() {
           <a
             href="#"
             className="sidebar-link"
-            onClick={(event) => event.preventDefault()}
+            onClick={(event) =>
+              event.preventDefault()
+            }
           >
             <FaChartPie />
             <span>Reports</span>
@@ -657,7 +894,9 @@ function Meetings() {
           <a
             href="#"
             className="sidebar-link"
-            onClick={(event) => event.preventDefault()}
+            onClick={(event) =>
+              event.preventDefault()
+            }
           >
             <FaCog />
             <span>Settings</span>
@@ -702,7 +941,11 @@ function Meetings() {
               <button
                 type="button"
                 className="dashboard-profile"
-                onClick={() => setProfileOpen(!profileOpen)}
+                onClick={() =>
+                  setProfileOpen(
+                    !profileOpen
+                  )
+                }
               >
 
                 <div className="profile-avatar">
@@ -710,8 +953,13 @@ function Meetings() {
                 </div>
 
                 <div className="profile-info">
-                  <strong>{username}</strong>
-                  <span>Administrator</span>
+                  <strong>
+                    {username}
+                  </strong>
+
+                  <span>
+                    Administrator
+                  </span>
                 </div>
 
                 <FaChevronDown
@@ -734,8 +982,13 @@ function Meetings() {
                     </div>
 
                     <div>
-                      <strong>{username}</strong>
-                      <span>Administrator</span>
+                      <strong>
+                        {username}
+                      </strong>
+
+                      <span>
+                        Administrator
+                      </span>
                     </div>
 
                   </div>
@@ -747,7 +1000,9 @@ function Meetings() {
                     className="profile-dropdown-item"
                   >
                     <FaUserCircle />
-                    <span>My Profile</span>
+                    <span>
+                      My Profile
+                    </span>
                   </button>
 
                   <button
@@ -755,7 +1010,9 @@ function Meetings() {
                     className="profile-dropdown-item"
                   >
                     <FaCog />
-                    <span>Settings</span>
+                    <span>
+                      Settings
+                    </span>
                   </button>
 
                   <div className="profile-dropdown-divider"></div>
@@ -763,10 +1020,14 @@ function Meetings() {
                   <button
                     type="button"
                     className="profile-dropdown-item logout-item"
-                    onClick={handleLogout}
+                    onClick={
+                      handleLogout
+                    }
                   >
                     <FaSignOutAlt />
-                    <span>Logout</span>
+                    <span>
+                      Logout
+                    </span>
                   </button>
 
                 </div>
@@ -794,7 +1055,9 @@ function Meetings() {
                   MANAGEMENT
                 </span>
 
-                <h1>Meetings</h1>
+                <h1>
+                  Meetings
+                </h1>
 
                 <p>
                   Manage VIKOBA meetings and meeting records.
@@ -805,7 +1068,9 @@ function Meetings() {
               <button
                 type="button"
                 className="members-add-button"
-                onClick={openAddModal}
+                onClick={
+                  openAddModal
+                }
               >
                 <FaPlus />
                 Add Meeting
@@ -824,8 +1089,13 @@ function Meetings() {
                 </div>
 
                 <div>
-                  <span>Total Meetings</span>
-                  <strong>{meetings.length}</strong>
+                  <span>
+                    Total Meetings
+                  </span>
+
+                  <strong>
+                    {meetings.length}
+                  </strong>
                 </div>
 
               </div>
@@ -837,8 +1107,13 @@ function Meetings() {
                 </div>
 
                 <div>
-                  <span>Financial Cycles</span>
-                  <strong>{cycles.length}</strong>
+                  <span>
+                    Financial Cycles
+                  </span>
+
+                  <strong>
+                    {cycles.length}
+                  </strong>
                 </div>
 
               </div>
@@ -850,8 +1125,15 @@ function Meetings() {
                 </div>
 
                 <div>
-                  <span>Showing</span>
-                  <strong>{filteredMeetings.length}</strong>
+                  <span>
+                    Showing
+                  </span>
+
+                  <strong>
+                    {
+                      filteredMeetings.length
+                    }
+                  </strong>
                 </div>
 
               </div>
@@ -872,7 +1154,9 @@ function Meetings() {
                     type="text"
                     value={search}
                     onChange={(event) =>
-                      setSearch(event.target.value)
+                      setSearch(
+                        event.target.value
+                      )
                     }
                     placeholder="Search meetings..."
                   />
@@ -880,7 +1164,9 @@ function Meetings() {
                   {search && (
                     <button
                       type="button"
-                      onClick={() => setSearch('')}
+                      onClick={() =>
+                        setSearch('')
+                      }
                     >
                       <FaTimes />
                     </button>
@@ -893,30 +1179,36 @@ function Meetings() {
                   <select
                     value={cycleFilter}
                     onChange={(event) =>
-                      setCycleFilter(event.target.value)
+                      setCycleFilter(
+                        event.target.value
+                      )
                     }
                   >
                     <option value="ALL">
                       All Cycles
                     </option>
 
-                    {cycles.map((cycle) => (
-                      <option
-                        key={cycle.id}
-                        value={cycle.id}
-                      >
-                        {cycle.name ||
-                          cycle.cycleName ||
-                          `Cycle #${cycle.id}`}
-                      </option>
-                    ))}
+                    {cycles.map(
+                      (cycle) => (
+                        <option
+                          key={cycle.id}
+                          value={cycle.id}
+                        >
+                          {cycle.name ||
+                            cycle.cycleName ||
+                            `Cycle #${cycle.id}`}
+                        </option>
+                      )
+                    )}
 
                   </select>
 
                   <select
                     value={sortBy}
                     onChange={(event) =>
-                      setSortBy(event.target.value)
+                      setSortBy(
+                        event.target.value
+                      )
                     }
                   >
                     <option value="NEWEST">
@@ -935,7 +1227,9 @@ function Meetings() {
                   <button
                     type="button"
                     className="members-export-button"
-                    onClick={handleExport}
+                    onClick={
+                      handleExport
+                    }
                   >
                     <FaDownload />
                     Export
@@ -975,7 +1269,9 @@ function Meetings() {
 
                     <button
                       type="button"
-                      onClick={openAddModal}
+                      onClick={
+                        openAddModal
+                      }
                     >
                       <FaPlus />
                       Add Meeting
@@ -990,100 +1286,130 @@ function Meetings() {
                     <thead>
 
                       <tr>
-
                         <th>MEETING</th>
                         <th>MEETING NUMBER</th>
                         <th>MEETING DATE</th>
                         <th>FINANCIAL CYCLE</th>
                         <th>NOTES</th>
                         <th>ACTIONS</th>
-
                       </tr>
 
                     </thead>
 
                     <tbody>
 
-                      {paginatedMeetings.map((meeting) => (
+                      {paginatedMeetings.map(
+                        (meeting) => (
 
-                        <tr key={meeting.id}>
+                          <tr
+                            key={meeting.id}
+                          >
 
-                          <td>
+                            <td>
 
-                            <div className="member-table-user">
+                              <div className="member-table-user">
 
-                              <div className="member-avatar">
-                                <FaCalendarAlt />
+                                <div className="member-avatar">
+                                  <FaCalendarAlt />
+                                </div>
+
+                                <div>
+
+                                  <strong>
+                                    Meeting #{meeting.meetingNumber}
+                                  </strong>
+
+                                  <span>
+                                    Meeting Record
+                                  </span>
+
+                                </div>
+
                               </div>
 
-                              <div>
-                                <strong>
-                                  Meeting #{meeting.meetingNumber}
-                                </strong>
+                            </td>
 
-                                <span>
-                                  Meeting Record
-                                </span>
+                            <td>
+
+                              <strong className="member-number">
+                                {
+                                  meeting.meetingNumber
+                                }
+                              </strong>
+
+                            </td>
+
+                            <td>
+                              {
+                                meeting.meetingDate ||
+                                '-'
+                              }
+                            </td>
+
+                            <td>
+                              {
+                                getCycleName(
+                                  meeting
+                                )
+                              }
+                            </td>
+
+                            <td>
+                              {
+                                meeting.notes ||
+                                '-'
+                              }
+                            </td>
+
+                            <td>
+
+                              <div className="member-actions">
+
+                                <button
+                                  type="button"
+                                  title="View"
+                                  onClick={() =>
+                                    handleView(
+                                      meeting
+                                    )
+                                  }
+                                >
+                                  <FaEye />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  title="Edit"
+                                  onClick={() =>
+                                    openEditModal(
+                                      meeting
+                                    )
+                                  }
+                                >
+                                  <FaEdit />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  title="Delete"
+                                  className="delete-action"
+                                  onClick={() =>
+                                    handleDelete(
+                                      meeting
+                                    )
+                                  }
+                                >
+                                  <FaTrash />
+                                </button>
+
                               </div>
 
-                            </div>
+                            </td>
 
-                          </td>
+                          </tr>
 
-                          <td>
-                            <strong className="member-number">
-                              {meeting.meetingNumber}
-                            </strong>
-                          </td>
-
-                          <td>
-                            {meeting.meetingDate || '-'}
-                          </td>
-
-                          <td>
-                            {getCycleName(meeting)}
-                          </td>
-
-                          <td>
-                            {meeting.notes || '-'}
-                          </td>
-
-                          <td>
-
-                            <div className="member-actions">
-
-                              <button
-                                type="button"
-                                title="View"
-                                onClick={() => handleView(meeting)}
-                              >
-                                <FaEye />
-                              </button>
-
-                              <button
-                                type="button"
-                                title="Edit"
-                                onClick={() => openEditModal(meeting)}
-                              >
-                                <FaEdit />
-                              </button>
-
-                              <button
-                                type="button"
-                                title="Delete"
-                                className="delete-action"
-                                onClick={() => handleDelete(meeting)}
-                              >
-                                <FaTrash />
-                              </button>
-
-                            </div>
-
-                          </td>
-
-                        </tr>
-
-                      ))}
+                        )
+                      )}
 
                     </tbody>
 
@@ -1101,20 +1427,30 @@ function Meetings() {
                     <span>
                       Showing {startIndex + 1}-
                       {Math.min(
-                        startIndex + membersPerPage,
+                        startIndex +
+                          membersPerPage,
                         filteredMeetings.length
                       )}{' '}
-                      of {filteredMeetings.length}
+                      of{' '}
+                      {
+                        filteredMeetings.length
+                      }
                     </span>
 
                     <div>
 
                       <button
                         type="button"
-                        disabled={currentPage === 1}
+                        disabled={
+                          currentPage === 1
+                        }
                         onClick={() =>
-                          setCurrentPage((page) =>
-                            Math.max(page - 1, 1)
+                          setCurrentPage(
+                            (page) =>
+                              Math.max(
+                                page - 1,
+                                1
+                              )
                           )
                         }
                       >
@@ -1122,33 +1458,48 @@ function Meetings() {
                       </button>
 
                       {Array.from(
-                        { length: totalPages },
-                        (_, index) => index + 1
-                      ).map((page) => (
+                        {
+                          length:
+                            totalPages,
+                        },
+                        (_, index) =>
+                          index + 1
+                      ).map(
+                        (page) => (
 
-                        <button
-                          type="button"
-                          key={page}
-                          className={
-                            currentPage === page
-                              ? 'active'
-                              : ''
-                          }
-                          onClick={() =>
-                            setCurrentPage(page)
-                          }
-                        >
-                          {page}
-                        </button>
+                          <button
+                            type="button"
+                            key={page}
+                            className={
+                              currentPage === page
+                                ? 'active'
+                                : ''
+                            }
+                            onClick={() =>
+                              setCurrentPage(
+                                page
+                              )
+                            }
+                          >
+                            {page}
+                          </button>
 
-                      ))}
+                        )
+                      )}
 
                       <button
                         type="button"
-                        disabled={currentPage === totalPages}
+                        disabled={
+                          currentPage ===
+                          totalPages
+                        }
                         onClick={() =>
-                          setCurrentPage((page) =>
-                            Math.min(page + 1, totalPages)
+                          setCurrentPage(
+                            (page) =>
+                              Math.min(
+                                page + 1,
+                                totalPages
+                              )
                           )
                         }
                       >
@@ -1175,7 +1526,9 @@ function Meetings() {
 
         <div
           className="members-modal-backdrop"
-          onMouseDown={closeModal}
+          onMouseDown={
+            closeModal
+          }
         >
 
           <div
@@ -1205,7 +1558,9 @@ function Meetings() {
 
               <button
                 type="button"
-                onClick={closeModal}
+                onClick={
+                  closeModal
+                }
                 disabled={saving}
               >
                 <FaTimes />
@@ -1213,11 +1568,13 @@ function Meetings() {
 
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form
+              onSubmit={
+                handleSubmit
+              }
+            >
 
               <div className="members-form-grid">
-
-                {/* MEETING NUMBER */}
 
                 <div className="members-form-group">
 
@@ -1228,16 +1585,18 @@ function Meetings() {
                   <input
                     type="text"
                     name="meetingNumber"
-                    value={form.meetingNumber}
-                    onChange={handleInputChange}
+                    value={
+                      form.meetingNumber
+                    }
+                    onChange={
+                      handleInputChange
+                    }
                     placeholder="e.g. 1"
                     required
                     inputMode="numeric"
                   />
 
                 </div>
-
-                {/* MEETING DATE */}
 
                 <div className="members-form-group">
 
@@ -1248,14 +1607,16 @@ function Meetings() {
                   <input
                     type="date"
                     name="meetingDate"
-                    value={form.meetingDate}
-                    onChange={handleInputChange}
+                    value={
+                      form.meetingDate
+                    }
+                    onChange={
+                      handleInputChange
+                    }
                     required
                   />
 
                 </div>
-
-                {/* FINANCIAL CYCLE */}
 
                 <div className="members-form-group">
 
@@ -1265,8 +1626,12 @@ function Meetings() {
 
                   <select
                     name="cycleId"
-                    value={form.cycleId}
-                    onChange={handleInputChange}
+                    value={
+                      form.cycleId
+                    }
+                    onChange={
+                      handleInputChange
+                    }
                     required
                   >
 
@@ -1274,24 +1639,24 @@ function Meetings() {
                       Select Financial Cycle
                     </option>
 
-                    {cycles.map((cycle) => (
+                    {cycles.map(
+                      (cycle) => (
 
-                      <option
-                        key={cycle.id}
-                        value={cycle.id}
-                      >
-                        {cycle.name ||
-                          cycle.cycleName ||
-                          `Cycle #${cycle.id}`}
-                      </option>
+                        <option
+                          key={cycle.id}
+                          value={cycle.id}
+                        >
+                          {cycle.name ||
+                            cycle.cycleName ||
+                            `Cycle #${cycle.id}`}
+                        </option>
 
-                    ))}
+                      )
+                    )}
 
                   </select>
 
                 </div>
-
-                {/* NOTES */}
 
                 <div className="members-form-group">
 
@@ -1301,8 +1666,12 @@ function Meetings() {
 
                   <textarea
                     name="notes"
-                    value={form.notes}
-                    onChange={handleInputChange}
+                    value={
+                      form.notes
+                    }
+                    onChange={
+                      handleInputChange
+                    }
                     placeholder="Enter meeting notes"
                     rows="4"
                   />
@@ -1311,14 +1680,14 @@ function Meetings() {
 
               </div>
 
-              {/* FOOTER */}
-
               <div className="members-modal-footer">
 
                 <button
                   type="button"
                   className="members-cancel-button"
-                  onClick={closeModal}
+                  onClick={
+                    closeModal
+                  }
                   disabled={saving}
                 >
                   Cancel
