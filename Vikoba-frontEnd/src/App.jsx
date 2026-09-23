@@ -12,6 +12,18 @@ import Contributions from './pages/admin/Contributions'
 
 import Loans from './pages/admin/Loans'
 
+import Payments from './pages/admin/Payments'
+
+import Penalties from './pages/admin/Penalties'
+
+import Expenses from './pages/admin/Expenses'
+
+import ShareOut from './pages/admin/ShareOut'
+
+import Reports from './pages/admin/Reports'
+
+import Settings from './pages/admin/Settings'
+
 function App() {
 
   const token = localStorage.getItem('vikoba_token')
@@ -46,6 +58,7 @@ function App() {
 
         window.location.reload()
       }
+
     }
 
     window.history.pushState(
@@ -121,7 +134,44 @@ function App() {
 
   }
 
+  if (path === '/payments') {
+
+    return <Payments />
+
+  }
+
+  if (path === '/penalties') {
+
+    return <Penalties />
+
+  }
+
+  if (path === '/expenses') {
+
+    return <Expenses />
+
+  }
+
+  if (path === '/share-outs') {
+
+    return <ShareOut />
+
+  }
+
+  if (path === '/reports') {
+
+    return <Reports />
+
+  }
+
+  if (path === '/settings') {
+
+    return <Settings />
+
+  }
+
   return <AdminDashboard />
+
 }
 
 export default App

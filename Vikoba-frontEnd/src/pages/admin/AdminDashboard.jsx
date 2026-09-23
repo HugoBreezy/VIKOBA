@@ -443,12 +443,12 @@ function AdminDashboard() {
             FINANCIAL
           </div>
 
-          <a href="#" className="sidebar-link">
+          <a href="/payments" className="sidebar-link">
             <FaFileInvoiceDollar />
             <span>Payments</span>
           </a>
 
-          <a href="#" className="sidebar-link">
+          <a href="/penalties" className="sidebar-link">
             <FaExclamationTriangle />
             <span>Penalties</span>
           </a>

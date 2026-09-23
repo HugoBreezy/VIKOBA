@@ -832,27 +832,25 @@ function Meetings() {
             FINANCIAL
           </div>
 
-          <a
-            href="#"
-            className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
-          >
-            <FaFileInvoiceDollar />
-            <span>Payments</span>
-          </a>
+<a
+  href="/payments"
+  className="sidebar-link"
+>
+  <FaFileInvoiceDollar />
+  <span>
+    Payments
+  </span>
+</a>
 
-          <a
-            href="#"
-            className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
-          >
-            <FaExclamationTriangle />
-            <span>Penalties</span>
-          </a>
+<a
+  href="/penalties"
+  className="sidebar-link"
+>
+  <FaExclamationTriangle />
+  <span>
+    Penalties
+  </span>
+</a>
 
           <a
             href="#"
@@ -891,16 +889,16 @@ function Meetings() {
             <span>Reports</span>
           </a>
 
-          <a
-            href="#"
-            className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
-          >
-            <FaCog />
-            <span>Settings</span>
-          </a>
+// Settings
+<a
+  href="/settings"
+  className="sidebar-link"
+>
+  <FaCog />
+  <span>
+    Settings
+  </span>
+</a>
 
         </nav>
 

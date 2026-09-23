@@ -8,7 +8,7 @@ public class VikobaApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(VikobaApplication.class, args);
-        System.out.println("System run successfuly");
+        System.out.println("System run successfuly Hoooraaaaay");
 	}
 
 }

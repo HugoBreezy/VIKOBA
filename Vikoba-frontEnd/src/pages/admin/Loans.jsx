@@ -27,6 +27,7 @@ import {
   getLoans,
   getMembers,
   getFinancialCycles,
+  getContributions,
 } from '../../services/api'
 
 const API_BASE_URL = 'http://localhost:8080'
@@ -123,6 +124,7 @@ function Loans() {
   const [loans, setLoans] = useState([])
   const [members, setMembers] = useState([])
   const [cycles, setCycles] = useState([])
+  const [contributions, setContributions] = useState([])
 
   const [loading, setLoading] =
     useState(true)
@@ -215,9 +217,11 @@ function Loans() {
       const [
         membersData,
         cyclesData,
+        contributionsData,
       ] = await Promise.all([
         getMembers(),
         getFinancialCycles(),
+        getContributions(),
       ])
 
       setMembers(
@@ -229,6 +233,12 @@ function Loans() {
       setCycles(
         Array.isArray(cyclesData)
           ? cyclesData
+          : []
+      )
+
+      setContributions(
+        Array.isArray(contributionsData)
+          ? contributionsData
           : []
       )
     } catch (error) {
@@ -379,6 +389,42 @@ function Loans() {
     ]
   )
 
+  const totalSelectedContributions = useMemo(() => {
+    if (!form.memberId || !form.cycleId) {
+      return 0
+    }
+
+    return contributions.reduce((total, contribution) => {
+      const contributionMemberId =
+        contribution.member?.id ?? contribution.memberId
+      const contributionCycleId =
+        contribution.cycle?.id ?? contribution.cycleId
+
+      if (
+        String(contributionMemberId) !==
+          String(form.memberId) ||
+        String(contributionCycleId) !==
+          String(form.cycleId)
+      ) {
+        return total
+      }
+
+      return (
+        total +
+        (Number(contribution.amount) || 0)
+      )
+    }, 0)
+  }, [
+    contributions,
+    form.memberId,
+    form.cycleId,
+  ])
+
+  const loanMultiplier = 3
+
+  const maximumAllowedLoan =
+    totalSelectedContributions * loanMultiplier
+
   const calculateInterestPreview =
     () => {
       const principal =
@@ -521,6 +567,41 @@ function Loans() {
         text:
           'A new loan can only be created in an OPEN financial cycle.',
         confirmButtonText: 'OK',
+      })
+
+      return
+    }
+
+    const principalAmount =
+      Number(form.principalAmount) || 0
+
+    if (
+      !editingLoan &&
+      maximumAllowedLoan <= 0
+    ) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Loan Not Allowed',
+        text:
+          'This member has no contributions in the selected financial cycle, so the maximum allowed loan is TSh 0.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#1450c8',
+      })
+
+      return
+    }
+
+    if (
+      !editingLoan &&
+      principalAmount > maximumAllowedLoan
+    ) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Loan Amount Exceeds Limit',
+        text:
+          `The maximum allowed loan for this member in the selected cycle is TSh ${formatCurrency(maximumAllowedLoan)}.`,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#1450c8',
       })
 
       return
@@ -1156,31 +1237,25 @@ function Loans() {
             FINANCIAL
           </div>
 
-          <a
-            href="#"
-            className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
-          >
-            <FaFileInvoiceDollar />
-            <span>
-              Payments
-            </span>
-          </a>
+<a
+  href="/payments"
+  className="sidebar-link"
+>
+  <FaFileInvoiceDollar />
+  <span>
+    Payments
+  </span>
+</a>
 
-          <a
-            href="#"
-            className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
-          >
-            <FaExclamationTriangle />
-            <span>
-              Penalties
-            </span>
-          </a>
+<a
+  href="/penalties"
+  className="sidebar-link"
+>
+  <FaExclamationTriangle />
+  <span>
+    Penalties
+  </span>
+</a>
 
           <a
             href="#"
@@ -1225,18 +1300,16 @@ function Loans() {
             </span>
           </a>
 
-          <a
-            href="#"
-            className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
-          >
-            <FaCog />
-            <span>
-              Settings
-            </span>
-          </a>
+// Settings
+<a
+  href="/settings"
+  className="sidebar-link"
+>
+  <FaCog />
+  <span>
+    Settings
+  </span>
+</a>
 
         </nav>
 
@@ -2159,6 +2232,38 @@ function Loans() {
                           'N/A'}
                       </small>
                     )}
+
+                  </div>
+
+                  <div className="col-12">
+
+                    <div
+                      className={
+                        `alert ${
+                          maximumAllowedLoan > 0
+                            ? 'alert-info'
+                            : 'alert-warning'
+                        } border mb-0`
+                      }
+                    >
+                      <strong>
+                        Maximum Allowed Loan
+                      </strong>
+
+                      <div className="fs-5 mt-1">
+                        TSh {formatCurrency(maximumAllowedLoan)}
+                      </div>
+
+                      {form.memberId && form.cycleId ? (
+                        <small>
+                          Based on total contributions of TSh {formatCurrency(totalSelectedContributions)} × {loanMultiplier}.
+                        </small>
+                      ) : (
+                        <small>
+                          Select a member and financial cycle to calculate the maximum allowed loan.
+                        </small>
+                      )}
+                    </div>
 
                   </div>
 
