@@ -1232,7 +1232,6 @@ function ShareOut() {
             </span>
           </a>
 
-// Settings
 <a
   href="/settings"
   className="sidebar-link"

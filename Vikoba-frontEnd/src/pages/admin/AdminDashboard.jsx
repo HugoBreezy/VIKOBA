@@ -453,12 +453,12 @@ function AdminDashboard() {
             <span>Penalties</span>
           </a>
 
-          <a href="#" className="sidebar-link">
+          <a href="/expenses" className="sidebar-link">
             <FaMoneyBillWave />
             <span>Expenses</span>
           </a>
 
-          <a href="#" className="sidebar-link">
+          <a href="/share-outs" className="sidebar-link">
             <FaChartPie />
             <span>Share-Out</span>
           </a>
@@ -467,12 +467,12 @@ function AdminDashboard() {
             SYSTEM
           </div>
 
-          <a href="#" className="sidebar-link">
+          <a href="/reports" className="sidebar-link">
             <FaChartPie />
             <span>Reports</span>
           </a>
 
-          <a href="#" className="sidebar-link">
+          <a href="/settings" className="sidebar-link">
             <FaCog />
             <span>Settings</span>
           </a>

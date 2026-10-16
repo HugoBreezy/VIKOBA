@@ -853,22 +853,16 @@ function Meetings() {
 </a>
 
           <a
-            href="#"
+            href="/expenses"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaMoneyBillWave />
             <span>Expenses</span>
           </a>
 
           <a
-            href="#"
+            href="/share-outs"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
             <span>Share-Out</span>
@@ -879,17 +873,13 @@ function Meetings() {
           </div>
 
           <a
-            href="#"
+            href="/reports"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
             <span>Reports</span>
           </a>
 
-// Settings
 <a
   href="/settings"
   className="sidebar-link"

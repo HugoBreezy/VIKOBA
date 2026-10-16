@@ -356,7 +356,7 @@ a {
 
   padding: 20px 13px;
 
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .sidebar-section-title {

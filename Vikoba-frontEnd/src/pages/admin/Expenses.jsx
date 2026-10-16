@@ -1022,11 +1022,8 @@ function Expenses() {
           </a>
 
           <a
-            href="#"
+            href="/share-outs"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
             <span>Share-Out</span>
@@ -1037,17 +1034,13 @@ function Expenses() {
           </div>
 
           <a
-            href="#"
+            href="/reports"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
             <span>Reports</span>
           </a>
 
-// Settings
 <a
   href="/settings"
   className="sidebar-link"

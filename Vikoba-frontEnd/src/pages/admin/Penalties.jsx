@@ -1444,9 +1444,6 @@ function Penalties() {
           <a
             href="/expenses"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaMoneyBillWave />
 
@@ -1458,9 +1455,6 @@ function Penalties() {
           <a
             href="/share-outs"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
 
@@ -1476,9 +1470,6 @@ function Penalties() {
           <a
             href="/reports"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
 
@@ -1487,7 +1478,6 @@ function Penalties() {
             </span>
           </a>
 
-// Settings
 <a
   href="/settings"
   className="sidebar-link"

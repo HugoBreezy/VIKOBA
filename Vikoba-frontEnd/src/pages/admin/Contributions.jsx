@@ -976,11 +976,8 @@ function Contributions() {
 </a>
 
           <a
-            href="#"
+            href="/expenses"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaMoneyBillWave />
 
@@ -990,11 +987,8 @@ function Contributions() {
           </a>
 
           <a
-            href="#"
+            href="/share-outs"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
 
@@ -1008,11 +1002,8 @@ function Contributions() {
           </div>
 
           <a
-            href="#"
+            href="/reports"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
 
@@ -1021,7 +1012,6 @@ function Contributions() {
             </span>
           </a>
 
-// Settings
 <a
   href="/settings"
   className="sidebar-link"

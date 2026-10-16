@@ -1555,11 +1555,8 @@ function Payments() {
 </a>
 
           <a
-            href="#"
+            href="/expenses"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaMoneyBillWave />
             <span>
@@ -1568,11 +1565,8 @@ function Payments() {
           </a>
 
           <a
-            href="#"
+            href="/share-outs"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
             <span>
@@ -1585,11 +1579,8 @@ function Payments() {
           </div>
 
           <a
-            href="#"
+            href="/reports"
             className="sidebar-link"
-            onClick={(event) =>
-              event.preventDefault()
-            }
           >
             <FaChartPie />
             <span>
@@ -1597,7 +1588,6 @@ function Payments() {
             </span>
           </a>
 
-// Settings
 <a
   href="/settings"
   className="sidebar-link"
